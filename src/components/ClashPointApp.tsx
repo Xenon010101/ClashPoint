@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   ArrowRight,
+  BarChart3,
   Check,
   ChevronRight,
   CircleStop,
@@ -30,6 +31,20 @@ import type {
 type InputMode = "script" | "manual" | "microphone";
 type MeetingStatus = "consent" | "active" | "paused" | "stopped" | "degraded";
 type Speaker = { id: "spk_maya" | "spk_diego"; label: "Maya" | "Diego" };
+type EvaluationReport = {
+  generatedAt: string;
+  fixtureVersion: string;
+  metrics: {
+    cases: number;
+    passed: number;
+    eventAccuracyPercent: number;
+    collisionAccuracyPercent: number;
+    groundedEvidencePercent: number;
+    falseInterruptions: number;
+    medianLatencyMs: number;
+  };
+  results: Array<{ id: string; name: string; passed: boolean }>;
+};
 
 const speakers: Speaker[] = [
   { id: "spk_maya", label: "Maya" },
@@ -80,6 +95,10 @@ export function ClashPointApp() {
   const [selectedCard, setSelectedCard] = useState<ResolutionCard | null>(null);
   const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(new Set());
   const [judgeMode, setJudgeMode] = useState(true);
+  const [evaluationOpen, setEvaluationOpen] = useState(false);
+  const [evaluationReport, setEvaluationReport] = useState<EvaluationReport | null>(null);
+  const [evaluationLoading, setEvaluationLoading] = useState(false);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [manualText, setManualText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [stage, setStage] = useState<"idle" | "resolve" | "retrieve" | "verify">("idle");
@@ -99,13 +118,32 @@ export function ClashPointApp() {
   }, []);
 
   useEffect(() => {
-    if (!selectedCard) return;
+    if (!selectedCard && !evaluationOpen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedCard(null);
+      if (event.key === "Escape") {
+        setSelectedCard(null);
+        setEvaluationOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedCard]);
+  }, [selectedCard, evaluationOpen]);
+
+  const openEvaluation = async (force = false) => {
+    setEvaluationOpen(true);
+    if ((!force && evaluationReport) || evaluationLoading) return;
+    setEvaluationLoading(true);
+    setEvaluationError(null);
+    try {
+      const response = await fetch("/api/evaluation", { cache: "no-store" });
+      if (!response.ok) throw new Error("Evaluation request failed");
+      setEvaluationReport((await response.json()) as EvaluationReport);
+    } catch {
+      setEvaluationError("The local fixture evaluation could not run. The live demo remains available.");
+    } finally {
+      setEvaluationLoading(false);
+    }
+  };
 
   const processTurn = useCallback(async (text: string, activeSpeaker: Speaker) => {
     const clean = text.trim();
@@ -318,6 +356,7 @@ export function ClashPointApp() {
           <span className="elapsed">{elapsed(startedAt, now)}</span>
           <span className={`live-state ${status}`}><i aria-hidden="true" />{liveLabel}</span>
           {judgeMode && <span className="judge-state"><ListChecks aria-hidden="true" />GUIDED DEMO</span>}
+          <button className="evaluation-trigger" onClick={() => void openEvaluation()}><BarChart3 aria-hidden="true" />EVAL 27</button>
           <span className="source-count">SOURCES <strong>2/2</strong></span>
         </div>
       </header>
@@ -444,7 +483,69 @@ export function ClashPointApp() {
       </footer>
 
       {selectedCard && <EvidenceDrawer card={selectedCard} onClose={() => setSelectedCard(null)} />}
+      {evaluationOpen && (
+        <EvaluationDrawer
+          report={evaluationReport}
+          loading={evaluationLoading}
+          error={evaluationError}
+          onRetry={() => void openEvaluation(true)}
+          onClose={() => setEvaluationOpen(false)}
+        />
+      )}
     </main>
+  );
+}
+
+function EvaluationDrawer({
+  report,
+  loading,
+  error,
+  onRetry,
+  onClose,
+}: {
+  report: EvaluationReport | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onClose: () => void;
+}) {
+  const metricItems = report
+    ? [
+        ["Cases passed", `${report.metrics.passed}/${report.metrics.cases}`],
+        ["Event accuracy", `${report.metrics.eventAccuracyPercent}%`],
+        ["Collision accuracy", `${report.metrics.collisionAccuracyPercent}%`],
+        ["Grounded evidence", `${report.metrics.groundedEvidencePercent}%`],
+        ["False interrupts", String(report.metrics.falseInterruptions)],
+        ["Median server time", `${report.metrics.medianLatencyMs} ms`],
+      ]
+    : [];
+
+  return (
+    <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+      <aside className="evaluation-drawer" role="dialog" aria-modal="true" aria-labelledby="evaluation-title">
+        <header>
+          <div><span>Measured locally</span><h2 id="evaluation-title">Frozen evaluation</h2></div>
+          <button autoFocus onClick={onClose} aria-label="Close evaluation"><X aria-hidden="true" /></button>
+        </header>
+        <p className="evaluation-intro">A deterministic run of the 27 frozen conversation cases. These are measured results, not decorative dashboard values.</p>
+        {loading && <div className="evaluation-loading">Running 27 cases…</div>}
+        {error && <div className="evaluation-error"><AlertTriangle aria-hidden="true" /><span>{error}</span><button onClick={onRetry}>Retry</button></div>}
+        {report && (
+          <>
+            <div className="evaluation-meta"><span>{report.fixtureVersion}</span><span>{new Date(report.generatedAt).toLocaleTimeString()}</span></div>
+            <div className="evaluation-metrics">
+              {metricItems.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}
+            </div>
+            <div className="evaluation-cases">
+              <div className="evaluation-cases-head"><span>Case</span><span>Expected behavior</span><span>Result</span></div>
+              {report.results.map((result) => (
+                <div key={result.id} className="evaluation-case"><code>{result.id}</code><span>{result.name}</span><strong className={result.passed ? "passed" : "failed"}>{result.passed ? "PASS" : "FAIL"}</strong></div>
+              ))}
+            </div>
+          </>
+        )}
+      </aside>
+    </div>
   );
 }
 
