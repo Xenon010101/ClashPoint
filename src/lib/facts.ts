@@ -73,6 +73,24 @@ const baseFacts: Fact[] = [
     supersededBy: [],
     allowedPrincipalIds: ["demo_product"],
   },
+  {
+    factId: "F-DEC-1",
+    sourceSystem: "notion",
+    sourceObjectId: "ACME-DECISION-7",
+    sourceTitle: "Acme delivery decision log",
+    sourceUrl: "/demo-sources/notion/ACME-DECISION-7",
+    sourceRevision: "notion-decision@2026-09-17T11:05:00Z",
+    factType: "previous_decision",
+    entityKeys: ["customer:acme", "feature:custom-export", "topic:decision"],
+    statementVerbatim: "Do not build a custom export for Acme; use the standard export workflow.",
+    structured: { customer: "Acme", decision: "use standard export", rejectedOption: "custom export" },
+    status: "active",
+    effectiveAt: "2026-09-17T11:05:00.000Z",
+    observedAt: "2026-09-19T08:30:00.000Z",
+    supersedes: [],
+    supersededBy: [],
+    allowedPrincipalIds: ["demo_product"],
+  },
 ];
 
 const approvalFact: Fact = {
