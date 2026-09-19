@@ -260,6 +260,11 @@ button { color: inherit; }
 .resolution-card button:first-child { color: var(--paper); }
 .resolution-card button:hover { background: var(--ink-850); }
 .resolution-card button svg { width: 13px; }
+.resolution-card.compact > header { border-bottom: 0; }
+.compact-card-body { min-height: 58px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 18px; align-items: center; padding: 10px 14px 10px 16px; }
+.compact-card-body p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #d7d9d6; }
+.compact-card-body > span { color: var(--muted); font-family: var(--mono); font-size: 9px; }
+.compact-card-body button { color: var(--paper); }
 
 .pipeline { min-height: 52px; border-top: 1px solid var(--line); display: flex; align-items: center; padding: 0 20px; gap: 18px; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
 .pipeline-title { color: var(--muted); margin-right: 4px; }
@@ -356,6 +361,8 @@ button { color: inherit; }
   .card-grid { grid-template-columns: 1fr; }
   .card-grid > div:first-child { border-right: 0; border-bottom: 1px solid var(--line); }
   .card-reason, .safer { grid-template-columns: 1fr; gap: 6px; }
+  .compact-card-body { grid-template-columns: 1fr auto; }
+  .compact-card-body > span { display: none; }
   .pipeline-title, .pipeline-semantic { display: none; }
   .pipeline { justify-content: space-between; }
   .control-rail { grid-template-columns: 1fr auto; }

@@ -77,6 +77,7 @@ export function ClashPointApp() {
   const [cards, setCards] = useState<ResolutionCard[]>([]);
   const [currentEvent, setCurrentEvent] = useState<ConversationEvent | null>(null);
   const [selectedCard, setSelectedCard] = useState<ResolutionCard | null>(null);
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(new Set());
   const [manualText, setManualText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [stage, setStage] = useState<"idle" | "resolve" | "retrieve" | "verify">("idle");
@@ -161,6 +162,7 @@ export function ClashPointApp() {
     setCards([]);
     setCurrentEvent(null);
     setSelectedCard(null);
+    setExpandedCardIds(new Set());
     setManualText("");
     setProcessing(false);
     setStage("idle");
@@ -370,10 +372,12 @@ export function ClashPointApp() {
                 <span>ClashPoint only interrupts when connected evidence supports it.</span>
               </div>
             ) : (
-              cards.map((card) => (
+              cards.map((card, index) => (
                 <ResolutionCardView
                   card={card}
                   key={card.cardId}
+                  compact={index > 0 && !expandedCardIds.has(card.cardId)}
+                  onExpand={() => setExpandedCardIds((ids) => new Set(ids).add(card.cardId))}
                   onInspect={() => setSelectedCard(card)}
                   onDismiss={() => setCards((items) => items.filter((item) => item.cardId !== card.cardId))}
                 />
@@ -439,14 +443,34 @@ export function ClashPointApp() {
   );
 }
 
-function ResolutionCardView({ card, onInspect, onDismiss }: { card: ResolutionCard; onInspect: () => void; onDismiss: () => void }) {
+function ResolutionCardView({
+  card,
+  compact,
+  onExpand,
+  onInspect,
+  onDismiss,
+}: {
+  card: ResolutionCard;
+  compact: boolean;
+  onExpand: () => void;
+  onInspect: () => void;
+  onDismiss: () => void;
+}) {
   const isInterrupt = card.severity === "interrupt";
   return (
-    <article className={`resolution-card ${isInterrupt ? "interrupt" : "warning"}`} tabIndex={-1}>
+    <article className={`resolution-card ${isInterrupt ? "interrupt" : "warning"} ${compact ? "compact" : ""}`} tabIndex={-1}>
       <header>
         <div className="severity"><AlertTriangle aria-hidden="true" /><span>{isInterrupt ? "CONFLICT" : "WARNING"}</span><i>·</i>{card.title}</div>
         <span className="fact-id">{card.evidence[0]?.factId}</span>
       </header>
+      {compact ? (
+        <div className="compact-card-body">
+          <p>“{card.eventQuote}”</p>
+          <span>{card.evidence[0]?.source} · {card.evidence[0]?.sourceDate}</span>
+          <button onClick={onExpand}>Expand decision <ChevronRight aria-hidden="true" /></button>
+        </div>
+      ) : (
+        <>
       <div className="card-grid">
         <div><span className="card-label">You said</span><p>“{card.eventQuote}”</p></div>
         <div><span className="card-label">Conflicts with</span><blockquote>“{card.evidence[0]?.quote}”</blockquote><small>{card.evidence[0]?.source} · {card.evidence[0]?.sourceDate}</small></div>
@@ -454,6 +478,8 @@ function ResolutionCardView({ card, onInspect, onDismiss }: { card: ResolutionCa
       <div className="card-reason"><span>Why this matters</span><p>{card.whyItMatters}</p></div>
       {card.saferWording && <div className="safer"><span>Safer version</span><p>“{card.saferWording}”</p></div>}
       <footer><button onClick={onInspect}>Inspect evidence <ChevronRight aria-hidden="true" /></button><button onClick={onDismiss}>Dismiss</button></footer>
+        </>
+      )}
     </article>
   );
 }
