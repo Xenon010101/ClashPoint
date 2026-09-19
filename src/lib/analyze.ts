@@ -35,7 +35,11 @@ function eventBase(turn: TranscriptTurn): ConversationEvent {
 function lastOperationalContext(recentTurns: TranscriptTurn[]) {
   return [...recentTurns]
     .reverse()
-    .find((turn) => /blocker|promise|commit|ship|launch|own|assign|p0|approved|legal/i.test(turn.textRaw));
+    .find((turn) =>
+      /blocker|promise|commit|ship|launch|own|assign|p0|approved|legal|auth refactor|custom export|deadline/i.test(
+        turn.textRaw,
+      ),
+    );
 }
 
 export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn): ConversationEvent {
@@ -67,16 +71,29 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
       event.deadline = "Friday";
       return event;
     }
-    if (/valya/.test(contextText) && /auth refactor/.test(contextText)) {
+    if (/auth refactor/.test(contextText) && /(valya|diego)/.test(contextText)) {
+      const assignee = /valya/.test(contextText) ? "Valya" : "Diego";
       event.eventType = "status_change";
-      event.canonicalStatement = "Valya is confirmed as the owner of Auth Refactor.";
+      event.canonicalStatement = `${assignee} is confirmed as the owner of Auth Refactor.`;
       event.entities = [{ type: "issue", value: "Auth Refactor" }];
-      event.assignee = "Valya";
+      event.assignee = assignee;
       return event;
     }
   }
 
   if (NO.test(text) && context) {
+    if (/legal|dpa|approved/.test(contextText) && /not yet/i.test(text)) {
+      return {
+        ...event,
+        eventType: "status_change",
+        certainty: "approved",
+        canonicalStatement: "Legal approval for the DPA remains pending.",
+        entities: [{ type: "approval", value: "DPA" }],
+        polarity: "negative",
+        sourceTurnIds: [context.turnId, turn.turnId],
+        contextResolved: true,
+      };
+    }
     return {
       ...event,
       eventType: "reversal",
@@ -101,6 +118,22 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
     };
   }
 
+  if (/^(valya|diego)[.!]?$/i.test(text) && context && /who.*own|assign.*p0|owner/i.test(contextText)) {
+    const assignee = /^valya/i.test(text) ? "Valya" : "Diego";
+    return {
+      ...event,
+      eventType: "assignment",
+      certainty: "approved",
+      canonicalStatement: `${assignee} is assigned to the new P0 work.`,
+      entities: [{ type: "person", value: assignee }],
+      assignee,
+      priority: "P0",
+      polarity: "positive",
+      sourceTurnIds: [context.turnId, turn.turnId],
+      contextResolved: true,
+    };
+  }
+
   if (/scratch that|cancel the|not anymore/.test(lower)) {
     return {
       ...event,
@@ -114,6 +147,70 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
   }
 
   const tentative = /\b(maybe|might|could|should we|targeting|pending)\b/.test(lower);
+  const conditional = /\b(after|if|pending|once|when)\b/.test(lower);
+
+  if (/feature x/.test(lower) && /useful someday|maybe useful|explore someday/.test(lower)) {
+    return {
+      ...event,
+      eventType: "decision",
+      certainty: "idea",
+      canonicalStatement: "Feature X may be useful in the future.",
+      entities: [{ type: "feature", value: "Feature X" }],
+      polarity: "neutral",
+    };
+  }
+
+  if (/custom export/.test(lower) && /acme/.test(lower)) {
+    const reconsidering = /reconsider|review|whether|should we/.test(lower);
+    return {
+      ...event,
+      eventType: "decision",
+      certainty: reconsidering ? "proposal" : "committed",
+      canonicalStatement: reconsidering
+        ? "The team proposes reconsidering a custom export for Acme."
+        : "The team commits to building a custom export for Acme.",
+      entities: [
+        { type: "customer", value: "Acme" },
+        { type: "feature", value: "Custom export" },
+      ],
+      polarity: "positive",
+    };
+  }
+
+  if (/auth refactor/.test(lower) && /\bp0\b/.test(lower) && /diego/.test(lower) && /move|make|keep/.test(lower)) {
+    return {
+      ...event,
+      eventType: "priority_change",
+      certainty: "committed",
+      canonicalStatement: "Auth Refactor is moved to P0 and remains assigned to Diego.",
+      entities: [{ type: "issue", value: "Auth Refactor" }],
+      assignee: "Diego",
+      priority: "P0",
+      polarity: "positive",
+    };
+  }
+
+  if (/give it to her|assign it to her/.test(lower) && /\bp0\b|feature x/.test(recentTurns.map((item) => item.textRaw).join(" ").toLowerCase())) {
+    const valyaMentioned = recentTurns.some((item) => /valya/i.test(item.textRaw));
+    if (valyaMentioned) {
+      return {
+        ...event,
+        eventType: "assignment",
+        certainty: "approved",
+        canonicalStatement: "The new Feature X P0 is assigned to Valya.",
+        entities: [
+          { type: "feature", value: "Feature X" },
+          { type: "person", value: "Valya" },
+        ],
+        assignee: "Valya",
+        priority: "P0",
+        polarity: "positive",
+        sourceTurnIds: [...recentTurns.slice(-2).map((item) => item.turnId), turn.turnId],
+        contextResolved: true,
+      };
+    }
+  }
+
   const isFeaturePromise = /feature x/.test(lower) && /(promise|commit|ship|launch|friday)/.test(lower);
   if (isFeaturePromise) {
     return {
@@ -152,7 +249,11 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
       ...event,
       eventType: "deadline",
       certainty: tentative ? "tentative" : "committed",
-      canonicalStatement: tentative ? "SSO may ship Friday." : "SSO will ship Friday.",
+      canonicalStatement: conditional
+        ? "SSO will ship after Auth Refactor is complete."
+        : tentative
+          ? "SSO may ship Friday."
+          : "SSO will ship Friday.",
       entities: [{ type: "feature", value: "SSO" }],
       deadline: /friday/.test(lower) ? "Friday" : null,
       polarity: "positive",
@@ -168,6 +269,17 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
       entities: [{ type: "issue", value: "Auth Refactor" }],
       assignee: "Valya",
       polarity: "positive",
+    };
+  }
+
+  if (tentative && /friday|next week|deadline|done by/.test(lower)) {
+    return {
+      ...event,
+      eventType: "deadline",
+      certainty: "tentative",
+      canonicalStatement: "The work might be complete by Friday.",
+      deadline: /friday/.test(lower) ? "Friday" : null,
+      polarity: "neutral",
     };
   }
 
@@ -249,7 +361,12 @@ export function detectCollision(
       factIds: ["F-CAP-1"],
       reasonCode: "capacity_limit_reached",
     };
-  } else if (event.eventType === "deadline" && /sso/.test(canonical) && active("F-DEP-1")) {
+  } else if (
+    event.eventType === "deadline" &&
+    /sso/.test(canonical) &&
+    !/after auth refactor is complete/.test(canonical) &&
+    active("F-DEP-1")
+  ) {
     collision = {
       collisionType: "dependency_blocker",
       severity: event.certainty === "tentative" ? "side_panel" : "interrupt",
@@ -262,6 +379,13 @@ export function detectCollision(
       severity: "side_panel",
       factIds: ["F-OWNER-1"],
       reasonCode: "known_owner_mismatch",
+    };
+  } else if (event.eventType === "decision" && /custom export.*acme/.test(canonical) && active("F-DEC-1")) {
+    collision = {
+      collisionType: "previous_decision",
+      severity: lane === "quiet_check" ? "side_panel" : "interrupt",
+      factIds: ["F-DEC-1"],
+      reasonCode: "contradicts_recorded_decision",
     };
   }
 
@@ -301,6 +425,11 @@ const cardCopy = {
     title: "Ownership mismatch",
     why: "The asserted owner differs from the current assignee in the connected source.",
     safer: "Confirm the ownership change in GitHub before treating it as current.",
+  },
+  previous_decision: {
+    title: "Decision conflict",
+    why: "The proposed work contradicts an active decision recorded for the same customer and feature.",
+    safer: "Use the standard export workflow, or explicitly reopen and replace the recorded decision.",
   },
 } as const;
 
