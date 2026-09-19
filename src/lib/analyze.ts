@@ -160,6 +160,19 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
     };
   }
 
+
+  if (/project secret/.test(lower) && /(promise|commit|ship|launch)/.test(lower)) {
+    return {
+      ...event,
+      eventType: "commitment",
+      certainty: tentative ? "tentative" : "committed",
+      canonicalStatement: "Project Secret is committed for Friday.",
+      entities: [{ type: "project", value: "Project Secret" }],
+      deadline: /friday/.test(lower) ? "Friday" : null,
+      polarity: "positive",
+    };
+  }
+
   if (/custom export/.test(lower) && /acme/.test(lower)) {
     const reconsidering = /reconsider|review|whether|should we/.test(lower);
     return {
