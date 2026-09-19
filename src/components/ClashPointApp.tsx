@@ -9,6 +9,7 @@ import {
   ExternalLink,
   FileText,
   GitBranch,
+  ListChecks,
   Mic,
   Pause,
   Play,
@@ -78,6 +79,7 @@ export function ClashPointApp() {
   const [currentEvent, setCurrentEvent] = useState<ConversationEvent | null>(null);
   const [selectedCard, setSelectedCard] = useState<ResolutionCard | null>(null);
   const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(new Set());
+  const [judgeMode, setJudgeMode] = useState(true);
   const [manualText, setManualText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [stage, setStage] = useState<"idle" | "resolve" | "retrieve" | "verify">("idle");
@@ -315,6 +317,7 @@ export function ClashPointApp() {
         <div className="header-status">
           <span className="elapsed">{elapsed(startedAt, now)}</span>
           <span className={`live-state ${status}`}><i aria-hidden="true" />{liveLabel}</span>
+          {judgeMode && <span className="judge-state"><ListChecks aria-hidden="true" />GUIDED DEMO</span>}
           <span className="source-count">SOURCES <strong>2/2</strong></span>
         </div>
       </header>
@@ -365,6 +368,7 @@ export function ClashPointApp() {
           </div>
 
           <div className="cards-region" aria-live="polite">
+            {judgeMode && <JudgeGuide cards={cards} running={runningScript} />}
             {cards.length === 0 && !processing ? (
               <div className="quiet-state">
                 <div className="quiet-rule" />
@@ -426,6 +430,7 @@ export function ClashPointApp() {
           )}
           <button onClick={stopMeeting}><CircleStop aria-hidden="true" /> Stop</button>
           <button onClick={reset}><RotateCcw aria-hidden="true" /> Reset</button>
+          <button className={judgeMode ? "judge-toggle active" : "judge-toggle"} onClick={() => setJudgeMode((enabled) => !enabled)} aria-pressed={judgeMode}><ListChecks aria-hidden="true" /> Judge guide</button>
         </div>
         <div className="mode-tabs" aria-label="Input mode">
           {(["script", "manual", "microphone"] as InputMode[]).map((item) => (
@@ -440,6 +445,34 @@ export function ClashPointApp() {
 
       {selectedCard && <EvidenceDrawer card={selectedCard} onClose={() => setSelectedCard(null)} />}
     </main>
+  );
+}
+
+function JudgeGuide({ cards, running }: { cards: ResolutionCard[]; running: boolean }) {
+  const found = new Set(cards.flatMap((card) => card.evidence.map((item) => item.factId)));
+  const completed = ["F-DEP-1", "F-LEGAL-1", "F-CAP-1"].filter((factId) => found.has(factId)).length;
+  const guidance = [
+    "Run the demo script. Watch “Yeah” resolve against the blocker question—not as an isolated word.",
+    "Status warning found. Inspect GH-42, then let the script test the customer promise.",
+    "Legal conflict found. Next, ClashPoint checks the P0 assignment against capacity.",
+    "Golden path complete: context, legal policy, and capacity were all verified from source evidence.",
+  ][completed];
+
+  return (
+    <aside className="judge-guide" aria-label="Guided judge demo">
+      <div className="judge-guide-head">
+        <span>Judge guide</span>
+        <strong>{completed}/3 checks</strong>
+      </div>
+      <p>{running ? "Demo running — follow the decision cards as they arrive." : guidance}</p>
+      <div className="judge-beats" aria-hidden="true">
+        {["Context", "Policy", "Capacity"].map((label, index) => (
+          <span key={label} className={completed > index ? "complete" : completed === index ? "current" : ""}>
+            <i>{completed > index ? <Check /> : index + 1}</i>{label}
+          </span>
+        ))}
+      </div>
+    </aside>
   );
 }
 
