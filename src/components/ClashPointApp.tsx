@@ -30,6 +30,7 @@ import type {
 
 type InputMode = "script" | "manual" | "microphone";
 type MeetingStatus = "consent" | "active" | "paused" | "stopped" | "degraded";
+type MicrophoneState = "idle" | "ready" | "listening" | "unsupported" | "denied" | "error";
 type Speaker = { id: "spk_maya" | "spk_diego"; label: "Maya" | "Diego" };
 type EvaluationReport = {
   generatedAt: string;
@@ -106,6 +107,8 @@ export function ClashPointApp() {
   const [lastTiming, setLastTiming] = useState<number | null>(null);
   const [runningScript, setRunningScript] = useState(false);
   const [micActive, setMicActive] = useState(false);
+  const [microphoneState, setMicrophoneState] = useState<MicrophoneState>("idle");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -209,6 +212,8 @@ export function ClashPointApp() {
     setLastTiming(null);
     setRunningScript(false);
     setMicActive(false);
+    setMicrophoneState("idle");
+    setInterimTranscript("");
     setNotice(null);
     setStartedAt(null);
     setStatus("consent");
@@ -237,14 +242,16 @@ export function ClashPointApp() {
   };
 
   const startMicrophone = () => {
+    type RecognitionResult = { 0: { transcript: string }; isFinal: boolean };
     type RecognitionCtor = new () => {
       continuous: boolean;
       interimResults: boolean;
       lang: string;
       start: () => void;
       stop: () => void;
-      onresult: ((event: { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null;
-      onerror: (() => void) | null;
+      onstart: (() => void) | null;
+      onresult: ((event: { resultIndex: number; results: ArrayLike<RecognitionResult> }) => void) | null;
+      onerror: ((event: { error?: string }) => void) | null;
       onend: (() => void) | null;
     };
     const browser = window as unknown as {
@@ -254,28 +261,77 @@ export function ClashPointApp() {
     const Recognition = browser.SpeechRecognition ?? browser.webkitSpeechRecognition;
     if (!Recognition) {
       setStatus("degraded");
+      setMicrophoneState("unsupported");
       setNotice("Microphone recognition is not supported here. Use Script or Manual mode.");
       return;
     }
     const recognition = new Recognition();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = "en-US";
+    recognition.onstart = () => {
+      setMicrophoneState("listening");
+      setMicActive(true);
+      setInterimTranscript("");
+    };
     recognition.onresult = (event) => {
-      const result = event.results[0];
-      if (result?.isFinal) void processTurn(result[0].transcript, speaker);
+      let interim = "";
+      const finalSegments: string[] = [];
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (!result) continue;
+        if (result.isFinal) finalSegments.push(result[0].transcript);
+        else interim += result[0].transcript;
+      }
+      setInterimTranscript(interim.trim());
+      const finalTranscript = finalSegments.join(" ").trim();
+      if (finalTranscript) {
+        setInterimTranscript("");
+        void processTurn(finalTranscript, speaker);
+      }
     };
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
+      const denied = event.error === "not-allowed" || event.error === "service-not-allowed";
       setStatus("degraded");
-      setNotice("Microphone permission or recognition failed. Use Script or Manual mode.");
+      setMicrophoneState(denied ? "denied" : "error");
+      setNotice(
+        denied
+          ? "Microphone permission was denied. Enable it in Chrome or Edge, or use Script or Manual mode."
+          : "Browser speech recognition is unavailable. Use Script or Manual mode.",
+      );
       setMicActive(false);
+      setInterimTranscript("");
     };
-    recognition.onend = () => setMicActive(false);
+    recognition.onend = () => {
+      setMicActive(false);
+      setInterimTranscript("");
+      setMicrophoneState((current) => current === "listening" ? "ready" : current);
+    };
     recognitionRef.current = recognition;
     setMode("microphone");
     setStatus("active");
+    setNotice(null);
+    setMicrophoneState("ready");
     setMicActive(true);
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setStatus("degraded");
+      setMicrophoneState("error");
+      setMicActive(false);
+      setNotice("Microphone could not start. Use Script or Manual mode, then retry when ready.");
+    }
+  };
+
+  const changeMode = (nextMode: InputMode) => {
+    recognitionRef.current?.stop();
+    setMicActive(false);
+    setInterimTranscript("");
+    setMode(nextMode);
+    if (nextMode !== "microphone" && status === "degraded") {
+      setStatus("active");
+      setNotice(null);
+    }
   };
 
   const pauseMeeting = () => {
@@ -453,9 +509,15 @@ export function ClashPointApp() {
               <button type="submit" disabled={!manualText.trim() || processing}><Send aria-hidden="true" /> Submit turn</button>
             </>
           ) : (
-            <button type="button" className={micActive ? "mic-button active" : "mic-button"} onClick={micActive ? () => recognitionRef.current?.stop() : startMicrophone}>
-              <Mic aria-hidden="true" />{micActive ? "Listening — click to stop" : `Listen as ${speaker.label}`}
-            </button>
+            <div className="microphone-control">
+              <button type="button" className={micActive ? "mic-button active" : "mic-button"} onClick={micActive ? () => recognitionRef.current?.stop() : startMicrophone}>
+                <Mic aria-hidden="true" />{micActive ? "Listening — click to stop" : `Listen as ${speaker.label}`}
+              </button>
+              <div className="microphone-readout" aria-live="polite">
+                <span className={`microphone-status ${microphoneState}`}><i aria-hidden="true" />{microphoneState === "idle" ? "Browser service" : microphoneState}</span>
+                <p>{interimTranscript || "Chrome or Edge speech service · final turns use the same verified pipeline"}</p>
+              </div>
+            </div>
           )}
         </form>
       )}
@@ -473,7 +535,7 @@ export function ClashPointApp() {
         </div>
         <div className="mode-tabs" aria-label="Input mode">
           {(["script", "manual", "microphone"] as InputMode[]).map((item) => (
-            <button key={item} className={mode === item ? "active" : ""} onClick={() => setMode(item)}>{item}</button>
+            <button key={item} className={mode === item ? "active" : ""} onClick={() => changeMode(item)}>{item}</button>
           ))}
         </div>
         <div className="rail-action">
