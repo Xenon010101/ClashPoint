@@ -25,12 +25,13 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **CORE-05** Add verifier and resolution-card builder. Depends: CORE-04. Acceptance: every evidence quote equals its stored fact; invalid IDs cannot create cards.
 - [x] **API-01** Add `POST /api/analyze-turn`. Depends: CORE-01–05. Acceptance: request/response validation, eight-turn bound, timings, and honest semantic state are enforced.
 - [x] **UI-04** Connect console to API. Depends: UI-03, API-01. Acceptance: all golden turns create the intended transcript/event/card state.
+- [x] **UI-05** Add compact decision history and Guided Judge Mode. Depends: UI-04. Acceptance: newest card remains expanded, older cards are recoverable, and Context → Policy → Capacity advances from actual evidence IDs.
 
 ## Phase 3 — Input modes (P0)
 
 - [x] **INPUT-01** Add timed Script mode and reset. Depends: UI-04. Acceptance: three golden cards appear in sequence and five resets return identical state.
 - [x] **INPUT-02** Add Manual mode with speaker selection. Depends: UI-04. Acceptance: submitted text traverses the same endpoint and cannot submit blank turns.
-- [ ] **INPUT-03** Add browser microphone adapter. Implementation and failure fallbacks are complete; acceptance still requires a live microphone-permission rehearsal in Chrome or Edge.
+- [ ] **INPUT-03** Add browser microphone adapter. Interim results, explicit unsupported/denied/error states, and one-click fallbacks are complete; acceptance still requires a live microphone-permission rehearsal in Chrome or Edge.
 
 ## Phase 4 — Optional semantic resolver (P1)
 
@@ -42,8 +43,10 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **TEST-01** Unit-test schemas, resolver, gate, ACL, retrieval, collision checks, supersession, and verifier. Acceptance: required safety and golden fixtures pass.
 - [x] **TEST-02** Test API success, invalid input, bounded context, restricted variant, approval variant, and provider failure. Acceptance: response contracts and failure language pass.
 - [x] **TEST-03** Add Playwright consent → script → evidence → reset and manual-input flows. Acceptance: stable in installed Edge.
+- [x] **TEST-04** Add frozen 27-case evaluation and read-only report route. Acceptance: all cases pass, every expected collision is grounded, and false interrupt count is zero.
+- [x] **UI-06** Add measured evaluation drawer. Depends: TEST-04. Acceptance: aggregates and all 27 case outcomes load from `GET /api/evaluation`; no metric is decorative.
 - [x] **VIS-01** Capture required 1440×900 and 1920×1080 states. Acceptance: no clipping, overflow, hidden controls, or illegible metadata.
-- [ ] **DEPLOY-01** Verify local production build and Vercel configuration. Acceptance: hosted demo works without Gemini credentials.
+- [ ] **DEPLOY-01** Verify Vercel configuration. Acceptance: hosted demo works without Gemini credentials. Status: intentionally deferred until explicit owner approval; no deployment has been attempted.
 - [ ] **DEMO-01** Rehearse scripted and microphone flows. Acceptance: golden narrative completes within 90 seconds with local fallback ready.
 
 ## Demo freeze
@@ -53,5 +56,6 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] Hosted and local builds use the same fixtures and copy.
 - [x] No real-looking secret exists in source or examples.
 - [x] Every source surface says **Demo fixture**.
+- [x] Frozen 27-case run passes with 100% grounded evidence and zero false interrupts.
 - [x] README recovery steps are verified on the demo laptop.
 - [ ] No new feature or dependency is added during the final 24 hours; only proven bug fixes are permitted.

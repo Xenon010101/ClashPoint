@@ -35,5 +35,7 @@ This file constrains every implementation and review session in this repository.
 - Keep components small, accessible, keyboard operable, and testable.
 - Preserve reduced-motion behavior, semantic landmarks, visible focus, and non-color severity labels.
 - Do not introduce generic AI visual motifs: no purple gradients, glassmorphism, chat bubbles, sparkles, decorative assistants, glowing blobs, or vanity metrics.
+- Product metrics may appear only when computed from the frozen evaluation runner and paired with per-case outcomes; never hard-code performance claims.
+- Do not deploy this repository until the owner explicitly authorizes deployment in a new instruction.
 - Follow [docs/design.md](./docs/design.md) for tokens, layout, copy, states, and responsive behavior.
 - A task is complete only when its acceptance condition in [docs/tasks.md](./docs/tasks.md) passes.

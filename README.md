@@ -29,7 +29,9 @@ Gemini is an optional resolver for unfamiliar phrasing. When it is disabled or u
 
 - **Script:** runs the judge-facing sequence through the real `/api/analyze-turn` pipeline.
 - **Manual:** choose Maya or Diego, enter a final transcript turn, and submit it.
-- **Microphone:** uses the browser `SpeechRecognition` API. Use current Chrome or Edge; browser support varies and recognition may use an online browser service. Manual and Script remain available as fallbacks.
+- **Microphone:** uses the browser `SpeechRecognition` API with visible interim text, permission/error states, and immediate recovery. Use current Chrome or Edge; recognition may use an online browser service. Manual and Script remain available as fallbacks.
+
+Guided Judge Mode is enabled by default. It advances through Context → Policy → Capacity while the script runs. Older cards collapse into a compact decision history so the newest finding remains readable. Choose **EVAL 27** in the header to run and inspect the frozen 27-case fixture suite; every number in that drawer is returned by the live evaluation endpoint.
 
 ## 90-second judge flow
 
@@ -38,9 +40,12 @@ Gemini is an optional resolver for unfamiliar phrasing. When it is disabled or u
 3. Maya says, “Okay. Let’s promise Feature X to Acme by Friday.” ClashPoint shows a red policy conflict with the exact Notion fixture and safer wording.
 4. Maya says, “Fine. Make the new work P0 and give it to Valya.” ClashPoint shows a deterministic capacity conflict.
 5. Open an evidence drawer to show source, revision, freshness, and the **Demo fixture** label.
-6. Reset, switch to Manual or Microphone, and demonstrate that every input mode uses the same analysis endpoint.
+6. Open **EVAL 27** and show that all 27 frozen language/safety cases were measured, including grounded-evidence rate and false interruptions.
+7. Reset, switch to Manual or Microphone, and demonstrate that every input mode uses the same analysis endpoint.
 
 ## Deploy to Vercel
+
+Deployment is intentionally deferred until the repository owner explicitly approves it. These are the prepared steps; they have not been executed.
 
 1. Push the repository to GitHub and import it into Vercel as a Next.js project.
 2. Keep `GEMINI_ENABLED=false` for a credential-free public demo, or add the optional server-only variables above.
@@ -53,6 +58,7 @@ Gemini is an optional resolver for unfamiliar phrasing. When it is disabled or u
 - **Gemini unavailable:** deterministic checks remain active; no clean bill of health is fabricated.
 - **Venue internet is unreliable:** use the local build and Script mode.
 - **A demo run is out of sequence:** press Reset; this restores the exact initial fixture state.
+- **Evaluation drawer cannot load:** close it and retry; it is a read-only local fixture run and does not affect the meeting pipeline.
 
 ## Commands
 

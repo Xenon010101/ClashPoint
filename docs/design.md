@@ -11,6 +11,7 @@ ClashPoint is a live decision-integrity instrument, not a meeting summary or cha
 3. **Evidence looks factual.** Source IDs, timestamps, revisions, and quotes use mono typography and consistent alignment.
 4. **Motion confirms change.** Use 160–220ms transitions; only the recording dot may pulse.
 5. **No AI costume.** No gradients, glass, chat bubbles, sparkles, floating assistants, or decorative charts.
+6. **Metrics must be measured.** Evaluation values come from the frozen server-side suite and expose their individual cases; no vanity numbers are hard-coded into the UI.
 
 ## Brand mark
 
@@ -64,11 +65,13 @@ Evidence opens from the right and leaves the transcript visible. At widths below
   - `TranscriptLedger`
   - `DecisionSurface`
     - `CurrentEvent`
+    - `JudgeGuide`
     - `ResolutionCard[]`
     - `PipelineActivity`
   - `ControlRail`
   - `ManualComposer`
   - `EvidenceDrawer`
+  - `EvaluationDrawer`
 
 ## UI states
 
@@ -82,16 +85,23 @@ Evidence opens from the right and leaves the transcript visible. At widths below
 - **Degraded:** names the unavailable capability and exposes fallbacks.
 - **Stopped:** transcript is retained in the current browser session; analysis stops.
 - **Reset:** returns to the consent screen and initial fixtures.
+- **Guided demo:** a restrained Context → Policy → Capacity rail explains the golden path and can be disabled.
+- **Evaluation:** a read-only drawer runs the 27 frozen cases and shows both aggregate measurements and per-case pass/fail state.
+- **Microphone interim:** speech-service text is visibly provisional until the browser marks it final; unsupported, denied, and service-error states name Script and Manual as fallbacks.
 
 ## Resolution card
 
 Required order: severity/type, “You said,” “Conflicts with,” source/date/status, “Why this matters,” optional safer wording, then Inspect evidence and Dismiss. Evidence text is verbatim from the fact store. Color is never the only severity signal.
+
+The newest resolution card is expanded. Older cards collapse to severity, trigger, source, and an explicit Expand action; no evidence or dismissal state is lost.
 
 ## Domain contracts
 
 `TranscriptTurn`, `ConversationEvent`, `Fact`, `CollisionRecord`, and `ResolutionCard` are defined once in `src/lib/schemas.ts` with Zod and inferred TypeScript types.
 
 `POST /api/analyze-turn` accepts the current final turn plus at most eight recent turns, a fixed demo principal, and an optional fixture variant. It returns the normalized event, gate decision, verified collision/card, capability state, and stage timings.
+
+`GET /api/evaluation` executes the fixed 27-case corpus without persistence and returns measured accuracy, grounding, false-interruption, latency, and per-case outcomes. The response is `no-store` so the drawer represents the current code path.
 
 Pipeline:
 
@@ -110,12 +120,15 @@ The browser owns the ephemeral meeting and transcript. The server owns seed fact
 - `F-CAP-1`: Valya owns three active P0s and the configured limit is three.
 - `F-APPROVAL-2`: later approval supersedes `F-LEGAL-1` in the approval variant.
 - `F-PRIVATE-1`: restricted Notion fact denied to `demo_product`.
+- `F-DEC-1`: active Notion decision to use the standard Acme export rather than a custom export.
 
 Golden scenarios:
 
 1. Operational question + “Yeah” → status mismatch with `F-DEP-1`.
 2. Friday external promise → legal/policy conflict with `F-LEGAL-1` and safer wording.
 3. New P0 assigned to Valya → capacity conflict with `F-CAP-1`.
+
+The extended frozen corpus covers 27 cases: context-dependent affirmations/rejections, conditional and tentative language, corrections, dates, pronouns, ownership, prior decisions, supersession, and restricted evidence. `src/lib/evaluation.ts` is the canonical corpus.
 
 ## Optional Gemini boundary
 
