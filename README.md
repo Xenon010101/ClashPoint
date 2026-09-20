@@ -27,7 +27,7 @@ Gemini is an optional resolver for unfamiliar phrasing. When it is disabled or u
 
 ## Demo modes
 
-- **Script:** runs the judge-facing sequence through the real `/api/analyze-turn` pipeline.
+- **Script:** choose **Next demo beat** to advance Context → Policy → Capacity at your own pace, or **Run demo script** to play the remaining sequence automatically. Reset enables a fresh replay. Both use the real `/api/analyze-turn` pipeline.
 - **Manual:** choose Maya or Diego, enter a final transcript turn, and submit it.
 - **Microphone:** uses the browser `SpeechRecognition` API with visible interim text, permission/error states, and immediate recovery. Use current Chrome or Edge; recognition may use an online browser service. Manual and Script remain available as fallbacks.
 
@@ -36,9 +36,9 @@ Guided Judge Mode is enabled by default. It advances through Context → Policy 
 ## 90-second judge flow
 
 1. Start **Acme release review** and point out the two connected demo sources.
-2. Run Script. Maya asks, “Are all the Acme blockers cleared?” Diego answers, “Yeah.” ClashPoint resolves the short reply and shows a yellow status mismatch grounded in GitHub issue GH-42.
-3. Maya says, “Okay. Let’s promise Feature X to Acme by Friday.” ClashPoint shows a red policy conflict with the exact Notion fixture and safer wording.
-4. Maya says, “Fine. Make the new work P0 and give it to Valya.” ClashPoint shows a deterministic capacity conflict.
+2. Choose **Next demo beat**. Maya asks, “Are all the Acme blockers cleared?” Diego answers, “Yeah.” ClashPoint resolves the short reply and shows a yellow status mismatch grounded in GitHub issue GH-42. Inspect it before advancing.
+3. Advance the next beat. Maya says, “Okay. Let’s promise Feature X to Acme by Friday.” ClashPoint shows a red policy conflict with the exact Notion fixture and safer wording.
+4. Advance again. Maya says, “Fine. Make the new work P0 and give it to Valya.” ClashPoint shows a deterministic capacity conflict.
 5. Open an evidence drawer to show source, revision, freshness, and the **Demo fixture** label.
 6. Open **EVAL 27** and show that all 27 frozen language/safety cases were measured, including grounded-evidence rate and false interruptions.
 7. Reset, switch to Manual or Microphone, and demonstrate that every input mode uses the same analysis endpoint.
@@ -58,6 +58,7 @@ Deployment is intentionally deferred until the repository owner explicitly appro
 - **Gemini unavailable:** deterministic checks remain active; no clean bill of health is fabricated.
 - **Venue internet is unreliable:** use the local build and Script mode.
 - **A demo run is out of sequence:** press Reset; this restores the exact initial fixture state.
+- **Pause or Stop:** suspends new input and discards in-flight results. Resume continues at the next unfinished script turn. Already captured transcript text remains visible; an interrupted script turn may be repeated on retry.
 - **Evaluation drawer cannot load:** close it and retry; it is a read-only local fixture run and does not affect the meeting pipeline.
 
 ## Commands
@@ -70,6 +71,8 @@ pnpm test:e2e     # Playwright golden path
 ```
 
 Implementation invariants live in [agent.md](./agent.md), the UI and architecture contract in [docs/design.md](./docs/design.md), and the delivery checklist in [docs/tasks.md](./docs/tasks.md).
+
+The fixed 27-case score measures only that corpus, not general language accuracy. A separate 20-case regression suite exercises paraphrases, negation, topic changes, ambiguous references, and uncertainty. These cases are development regressions, not an independent held-out benchmark.
 
 ## Brand asset
 

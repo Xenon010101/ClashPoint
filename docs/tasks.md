@@ -51,6 +51,11 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 
 ## Demo freeze
 
+- [x] **HARDEN-01** Invalidate delayed analysis and microphone callbacks on Pause, Stop, Reset, and mode change. Acceptance: lifecycle tests deliver stale responses deliberately and verify no card or error can reappear.
+- [x] **HARDEN-02** Limit short replies and pronouns to current unambiguous context. Acceptance: topic-change, ambiguous-owner, negation, and date regressions pass.
+- [x] **HARDEN-03** Add 20 additional language regression cases outside the displayed 27-case corpus. Acceptance: paraphrases and safety cases pass without changing the original evaluation expectations.
+- [x] **DEMO-02** Add presenter-controlled Next demo beat. Acceptance: browser test advances all three beats, blocks playback while paused, and verifies Reset restores the first beat.
+
 - [ ] All P0 tasks and safety tests pass.
 - [x] Script and Reset pass five consecutive runs.
 - [x] Hosted and local builds use the same fixtures and copy.

@@ -85,6 +85,8 @@ Evidence opens from the right and leaves the transcript visible. At widths below
 - **Degraded:** names the unavailable capability and exposes fallbacks.
 - **Stopped:** transcript is retained in the current browser session; analysis stops.
 - **Reset:** returns to the consent screen and initial fixtures.
+- **Cancellation:** Pause, Stop, Reset, mode changes, and unmount invalidate old request and recognition callbacks. Pause/Stop disable all input until Resume. The ledger preserves captured raw turns; Reset clears it.
+- **Presenter pacing:** Next demo beat processes the question/answer pair together, then one commitment and one assignment. Automatic playback resumes from the same cursor. Reset clears the cursor.
 - **Guided demo:** a restrained Context → Policy → Capacity rail explains the golden path and can be disabled.
 - **Evaluation:** a read-only drawer runs the 27 frozen cases and shows both aggregate measurements and per-case pass/fail state.
 - **Microphone interim:** speech-service text is visibly provisional until the browser marks it final; unsupported, denied, and service-error states name Script and Manual as fallbacks.
@@ -129,6 +131,8 @@ Golden scenarios:
 3. New P0 assigned to Valya → capacity conflict with `F-CAP-1`.
 
 The extended frozen corpus covers 27 cases: context-dependent affirmations/rejections, conditional and tentative language, corrections, dates, pronouns, ownership, prior decisions, supersession, and restricted evidence. `src/lib/evaluation.ts` is the canonical corpus.
+
+Additional language regressions in `src/lib/language-regression.test.ts` remain outside the displayed score. A short response only resolves against the immediately preceding operational context. Topic changes consume that context. Pronouns require an unambiguous adjacent subject/owner pair; unresolved short references are not passed to Gemini. Negation precedes commitment detection and conditional language cannot independently produce a red capacity alert.
 
 ## Optional Gemini boundary
 
