@@ -11,7 +11,7 @@ test("scripted demo produces all three verified cards and opens evidence", async
   await expect(page.getByRole("article").filter({ hasText: "Status mismatch" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("article").filter({ hasText: "Commitment conflict" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("article").filter({ hasText: "Capacity conflict" })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "Run demo script" })).toBeEnabled({ timeout: 5_000 });
+  await expect(page.getByRole("button", { name: "Demo complete" })).toBeDisabled({ timeout: 5_000 });
   await expect(page.getByText("Golden path complete:")).toBeVisible();
   await expect(page.getByRole("button", { name: "Expand decision" })).toHaveCount(2);
   await page.screenshot({ path: "docs/screenshots/conflicts-1440x900.png" });
