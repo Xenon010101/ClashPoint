@@ -33,13 +33,10 @@ function eventBase(turn: TranscriptTurn): ConversationEvent {
 }
 
 function lastOperationalContext(recentTurns: TranscriptTurn[]) {
-  return [...recentTurns]
-    .reverse()
-    .find((turn) =>
-      /blocker|promise|commit|ship|launch|own|assign|p0|approved|legal|auth refactor|custom export|deadline/i.test(
-        turn.textRaw,
-      ),
-    );
+  // A new topic consumes the pending dialogue; never search past it for an old question.
+  const last = recentTurns.at(-1);
+  return last && /blocker|promise|commit|ship|launch|own|assign|p0|approved|legal|auth refactor|custom export|deadline/i.test(last.textRaw)
+    ? last : undefined;
 }
 
 export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn): ConversationEvent {
@@ -50,25 +47,32 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
   const context = lastOperationalContext(recentTurns);
   const contextText = context?.textRaw.toLowerCase() ?? "";
 
+  // Negation and unresolved references must not be promoted into commitments.
+  const negative = /\b(do not|don't|don’t|will not|won't|won’t|cannot|can't|can’t|should not|shouldn't|shouldn’t)\b/i;
+  if (negative.test(text) && /promise|commit|ship|launch|assign|give|build|own/i.test(text)) {
+    return { ...event, eventType: "reversal", certainty: "reversed", canonicalStatement: text, polarity: "negative" };
+  }
+  if (YES.test(text) && negative.test(contextText)) return event;
+
   if (YES.test(text) && context) {
     event.certainty = "approved";
     event.polarity = "positive";
     event.contextResolved = true;
     event.sourceTurnIds = [context.turnId, turn.turnId];
-    if (/blocker/.test(contextText) && /(clear|resolved|closed)/.test(contextText)) {
+    if (/acme/.test(contextText) && /blocker/.test(contextText) && /(clear|resolved|closed)/.test(contextText)) {
       event.eventType = "status_change";
       event.canonicalStatement = "All Acme blockers are confirmed cleared.";
       event.entities = [{ type: "customer", value: "Acme" }];
       return event;
     }
-    if (/promise|commit/.test(contextText)) {
+    if (/promise|commit/.test(contextText) && /feature x/.test(contextText)) {
       event.eventType = "commitment";
-      event.canonicalStatement = "The team approves promising Feature X to Acme by Friday.";
+      event.canonicalStatement = `Approved: ${context.textRaw}`;
       event.entities = [
         { type: "feature", value: "Feature X" },
         { type: "customer", value: "Acme" },
       ];
-      event.deadline = "Friday";
+      event.deadline = /friday/.test(contextText) ? "Friday" : null;
       return event;
     }
     if (/auth refactor/.test(contextText) && /(valya|diego)/.test(contextText)) {
@@ -105,7 +109,7 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
     };
   }
 
-  if (DAY.test(text) && previous && /when|commit|launch|ship/i.test(previous.textRaw)) {
+  if (DAY.test(text) && previous && /when|what day/i.test(previous.textRaw) && /commit|launch|ship|deadline/i.test(previous.textRaw)) {
     return {
       ...event,
       eventType: "deadline",
@@ -118,7 +122,7 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
     };
   }
 
-  if (/^(valya|diego)[.!]?$/i.test(text) && context && /who.*own|assign.*p0|owner/i.test(contextText)) {
+  if (/^(valya|diego)[.!]?$/i.test(text) && context && /who.*own|assign.*p0|owner/i.test(contextText) && /\bp0\b/.test(contextText)) {
     const assignee = /^valya/i.test(text) ? "Valya" : "Diego";
     return {
       ...event,
@@ -146,8 +150,8 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
     };
   }
 
-  const tentative = /\b(maybe|might|could|should we|targeting|pending)\b/.test(lower);
   const conditional = /\b(after|if|pending|once|when)\b/.test(lower);
+  const tentative = /\b(maybe|might|could|should we|targeting|pending|provided|unless)\b/.test(lower) || (conditional && !/even if/.test(lower)) || text.endsWith("?");
 
   if (/feature x/.test(lower) && /useful someday|maybe useful|explore someday/.test(lower)) {
     return {
@@ -174,7 +178,7 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
   }
 
   if (/custom export/.test(lower) && /acme/.test(lower)) {
-    const reconsidering = /reconsider|review|whether|should we/.test(lower);
+    const reconsidering = tentative || /reconsider|review|whether|should we/.test(lower);
     return {
       ...event,
       eventType: "decision",
@@ -203,13 +207,17 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
     };
   }
 
-  if (/give it to her|assign it to her/.test(lower) && /\bp0\b|feature x/.test(recentTurns.map((item) => item.textRaw).join(" ").toLowerCase())) {
-    const valyaMentioned = recentTurns.some((item) => /valya/i.test(item.textRaw));
-    if (valyaMentioned) {
+  if (/give it to her|assign it to her/.test(lower)) {
+    const referenceTurns = recentTurns.slice(-2);
+    const subject = referenceTurns[0]?.textRaw ?? "";
+    const owner = referenceTurns.at(-1)?.textRaw ?? "";
+    // Resolve only the tightly scoped, unambiguous subject/owner pair.
+    const clearOwner = /^(valya) (has|is|would|should)\b/i.test(owner) && !/\b(and|or|maya|diego)\b/i.test(owner);
+    if (/feature x/i.test(subject) && /\bp0\b/i.test(subject) && clearOwner) {
       return {
         ...event,
         eventType: "assignment",
-        certainty: "approved",
+        certainty: tentative ? "proposal" : "approved",
         canonicalStatement: "The new Feature X P0 is assigned to Valya.",
         entities: [
           { type: "feature", value: "Feature X" },
@@ -222,17 +230,16 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
         contextResolved: true,
       };
     }
+    return event;
   }
 
-  const isFeaturePromise = /feature x/.test(lower) && /(promise|commit|ship|launch|friday)/.test(lower);
+  const isFeaturePromise = /feature x/.test(lower) && /(promise|commit|ship|launch|deliver|targeting)/.test(lower);
   if (isFeaturePromise) {
     return {
       ...event,
       eventType: "commitment",
       certainty: tentative ? "tentative" : "committed",
-      canonicalStatement: tentative
-        ? "Feature X is tentatively targeted for Acme by Friday, pending approval."
-        : "Feature X will be promised to Acme by Friday.",
+      canonicalStatement: tentative ? `Tentative: ${text}` : text,
       entities: [
         { type: "feature", value: "Feature X" },
         { type: "customer", value: "Acme" },
@@ -262,11 +269,9 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
       ...event,
       eventType: "deadline",
       certainty: tentative ? "tentative" : "committed",
-      canonicalStatement: conditional
+      canonicalStatement: /(?:after|once|when).*auth refactor.*(?:complete|closes|closed|done)/i.test(text)
         ? "SSO will ship after Auth Refactor is complete."
-        : tentative
-          ? "SSO may ship Friday."
-          : "SSO will ship Friday.",
+        : text,
       entities: [{ type: "feature", value: "SSO" }],
       deadline: /friday/.test(lower) ? "Friday" : null,
       polarity: "positive",
@@ -338,7 +343,7 @@ export function detectCollision(
   facts: Fact[],
   lane: "ignore" | "quiet_check" | "immediate_check",
 ): CollisionRecord | null {
-  if (lane === "ignore") return null;
+  if (lane === "ignore" || event.polarity === "negative" || event.eventType === "reversal") return null;
   const canonical = event.canonicalStatement.toLowerCase();
   const active = (id: string) => facts.find((fact) => fact.factId === id && fact.status === "active");
   let collision: Omit<CollisionRecord, "collisionId" | "meetingId" | "eventId" | "status"> | null = null;
@@ -365,7 +370,7 @@ export function detectCollision(
   } else if (
     event.assignee?.toLowerCase() === "valya" &&
     event.priority?.toLowerCase() === "p0" &&
-    event.certainty !== "proposal" &&
+    lane === "immediate_check" &&
     active("F-CAP-1")
   ) {
     collision = {
@@ -485,7 +490,11 @@ export async function analyzeTurn(input: AnalyzeTurnRequest): Promise<AnalyzeTur
   const totalStart = performance.now();
   const resolverStart = performance.now();
   let event = resolveEvent(input.recentTurns, input.currentTurn);
-  const gemini = await resolveWithGemini(event, input.recentTurns, input.currentTurn);
+  const raw = input.currentTurn.textRaw.trim();
+  const unresolvedReference = YES.test(raw) || NO.test(raw) || DAY.test(raw) || /give it to her|assign it to her/i.test(raw);
+  const gemini = unresolvedReference
+    ? { event: null, state: "skipped" as const }
+    : await resolveWithGemini(event, input.recentTurns, input.currentTurn);
   if (gemini.event) event = gemini.event;
   const resolverMs = performance.now() - resolverStart;
 
