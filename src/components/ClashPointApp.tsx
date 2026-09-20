@@ -87,6 +87,12 @@ function formatTime(value: string) {
 
 export function ClashPointApp() {
   const [status, setStatus] = useState<MeetingStatus>("consent");
+  const statusRef = useRef<MeetingStatus>("consent");
+  const sessionVersion = useRef(0);
+  const requestRef = useRef<AbortController | null>(null);
+  const scriptCursor = useRef(0);
+  const [scriptPosition, setScriptPosition] = useState(0);
+  const scriptRun = useRef(0);
   const [mode, setMode] = useState<InputMode>("script");
   const [speaker, setSpeaker] = useState<Speaker>(speakers[0]);
   const [turns, setTurns] = useState<TranscriptTurn[]>([]);
@@ -112,8 +118,36 @@ export function ClashPointApp() {
   const [notice, setNotice] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
-  const scriptAbort = useRef(false);
   const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+  const transitionStatus = (next: MeetingStatus) => {
+    statusRef.current = next;
+    setStatus(next);
+  };
+
+  const cancelCapture = () => {
+    sessionVersion.current += 1;
+    scriptRun.current += 1;
+    requestRef.current?.abort();
+    requestRef.current = null;
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    recognition?.stop();
+    setProcessing(false);
+    setStage("idle");
+    setRunningScript(false);
+    setMicActive(false);
+    setInterimTranscript("");
+  };
+
+  useEffect(() => () => {
+    sessionVersion.current += 1;
+    scriptRun.current += 1;
+    requestRef.current?.abort();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    recognition?.stop();
+  }, []);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1_000);
@@ -150,7 +184,11 @@ export function ClashPointApp() {
 
   const processTurn = useCallback(async (text: string, activeSpeaker: Speaker) => {
     const clean = text.trim();
-    if (!clean) return;
+    if (!clean || requestRef.current || !["active", "degraded"].includes(statusRef.current)) return false;
+    const version = sessionVersion.current;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const isCurrent = () => version === sessionVersion.current && !controller.signal.aborted;
     const current = makeTurn(turnsRef.current.length + 1, activeSpeaker, clean);
     const recent = turnsRef.current.slice(-8);
     turnsRef.current = [...turnsRef.current, current];
@@ -159,10 +197,11 @@ export function ClashPointApp() {
     setStage("resolve");
     setNotice(null);
 
-    const stageTimer = window.setTimeout(() => setStage("retrieve"), 180);
+    const stageTimer = window.setTimeout(() => { if (isCurrent()) setStage("retrieve"); }, 180);
     try {
       const response = await fetch("/api/analyze-turn", {
         method: "POST",
+        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           meetingId: "mtg_acme_review",
@@ -173,33 +212,42 @@ export function ClashPointApp() {
         }),
       });
       if (!response.ok) throw new Error("Analysis request failed");
-      setStage("verify");
       const result = (await response.json()) as AnalyzeTurnResponse;
+      if (!isCurrent()) return false;
+      setStage("verify");
       setCurrentEvent(result.event);
       setSemanticState(result.checks.semantic);
       setLastTiming(result.timingsMs.total);
       if (result.card) {
         setCards((existing) => [result.card!, ...existing.filter((card) => card.cardId !== result.card!.cardId)]);
       }
+      return true;
     } catch {
+      if (!isCurrent()) return false;
+      statusRef.current = "degraded";
       setStatus("degraded");
       setNotice("Analysis is temporarily unavailable. Script and transcript controls remain active.");
+      return false;
     } finally {
       window.clearTimeout(stageTimer);
-      setProcessing(false);
-      setStage("idle");
+      if (isCurrent()) {
+        requestRef.current = null;
+        setProcessing(false);
+        setStage("idle");
+      }
     }
   }, []);
 
   const startMeeting = () => {
-    setStatus("active");
+    transitionStatus("active");
     setStartedAt(Date.now());
     setNotice(null);
   };
 
   const reset = () => {
-    scriptAbort.current = true;
-    recognitionRef.current?.stop();
+    cancelCapture();
+    scriptCursor.current = 0;
+    setScriptPosition(0);
     turnsRef.current = [];
     setTurns([]);
     setCards([]);
@@ -210,38 +258,44 @@ export function ClashPointApp() {
     setProcessing(false);
     setStage("idle");
     setLastTiming(null);
+    setSemanticState("skipped");
+    setEvaluationOpen(false);
     setRunningScript(false);
     setMicActive(false);
     setMicrophoneState("idle");
     setInterimTranscript("");
     setNotice(null);
     setStartedAt(null);
-    setStatus("consent");
+    transitionStatus("consent");
   };
 
-  const runScript = async () => {
-    if (runningScript || processing) return;
-    scriptAbort.current = false;
+  const runScript = async (oneBeat = false) => {
+    if (runningScript || requestRef.current || !["active", "degraded"].includes(statusRef.current)) return;
+    const run = ++scriptRun.current;
     setMode("script");
-    setStatus("active");
     setRunningScript(true);
-    for (const line of script) {
-      if (scriptAbort.current) break;
-      await processTurn(line.text, line.speaker);
-      await new Promise((resolve) => window.setTimeout(resolve, 1_250));
+    const end = oneBeat ? (scriptCursor.current < 2 ? 2 : scriptCursor.current + 1) : script.length;
+    while (scriptCursor.current < Math.min(end, script.length) && run === scriptRun.current) {
+      const line = script[scriptCursor.current];
+      const completed = await processTurn(line.text, line.speaker);
+      if (!completed || run !== scriptRun.current) break;
+      scriptCursor.current += 1;
+      setScriptPosition(scriptCursor.current);
+      if (!oneBeat && scriptCursor.current < end) await new Promise((resolve) => window.setTimeout(resolve, 1_250));
     }
-    setRunningScript(false);
+    if (run === scriptRun.current) setRunningScript(false);
   };
 
   const submitManual = async (event: FormEvent) => {
     event.preventDefault();
-    if (!manualText.trim() || processing) return;
+    if (!manualText.trim() || processing || !["active", "degraded"].includes(statusRef.current)) return;
     const text = manualText;
     setManualText("");
     await processTurn(text, speaker);
   };
 
   const startMicrophone = () => {
+    if (requestRef.current || !["active", "degraded"].includes(statusRef.current)) return;
     type RecognitionResult = { 0: { transcript: string }; isFinal: boolean };
     type RecognitionCtor = new () => {
       continuous: boolean;
@@ -260,21 +314,25 @@ export function ClashPointApp() {
     };
     const Recognition = browser.SpeechRecognition ?? browser.webkitSpeechRecognition;
     if (!Recognition) {
-      setStatus("degraded");
+      transitionStatus("degraded");
       setMicrophoneState("unsupported");
       setNotice("Microphone recognition is not supported here. Use Script or Manual mode.");
       return;
     }
     const recognition = new Recognition();
+    const version = sessionVersion.current;
+    const isCurrent = () => version === sessionVersion.current && recognitionRef.current === recognition;
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = "en-US";
     recognition.onstart = () => {
+      if (!isCurrent()) return;
       setMicrophoneState("listening");
       setMicActive(true);
       setInterimTranscript("");
     };
     recognition.onresult = (event) => {
+      if (!isCurrent()) return;
       let interim = "";
       const finalSegments: string[] = [];
       for (let index = event.resultIndex; index < event.results.length; index += 1) {
@@ -291,8 +349,9 @@ export function ClashPointApp() {
       }
     };
     recognition.onerror = (event) => {
+      if (!isCurrent()) return;
       const denied = event.error === "not-allowed" || event.error === "service-not-allowed";
-      setStatus("degraded");
+      transitionStatus("degraded");
       setMicrophoneState(denied ? "denied" : "error");
       setNotice(
         denied
@@ -303,20 +362,21 @@ export function ClashPointApp() {
       setInterimTranscript("");
     };
     recognition.onend = () => {
+      if (!isCurrent()) return;
       setMicActive(false);
       setInterimTranscript("");
       setMicrophoneState((current) => current === "listening" ? "ready" : current);
     };
     recognitionRef.current = recognition;
     setMode("microphone");
-    setStatus("active");
+    transitionStatus("active");
     setNotice(null);
     setMicrophoneState("ready");
     setMicActive(true);
     try {
       recognition.start();
     } catch {
-      setStatus("degraded");
+      transitionStatus("degraded");
       setMicrophoneState("error");
       setMicActive(false);
       setNotice("Microphone could not start. Use Script or Manual mode, then retry when ready.");
@@ -324,27 +384,22 @@ export function ClashPointApp() {
   };
 
   const changeMode = (nextMode: InputMode) => {
-    recognitionRef.current?.stop();
-    setMicActive(false);
-    setInterimTranscript("");
+    cancelCapture();
     setMode(nextMode);
     if (nextMode !== "microphone" && status === "degraded") {
-      setStatus("active");
+      transitionStatus("active");
       setNotice(null);
     }
   };
 
   const pauseMeeting = () => {
-    scriptAbort.current = true;
-    recognitionRef.current?.stop();
-    setRunningScript(false);
-    setMicActive(false);
-    setStatus("paused");
+    cancelCapture();
+    transitionStatus("paused");
   };
 
   const stopMeeting = () => {
     pauseMeeting();
-    setStatus("stopped");
+    transitionStatus("stopped");
   };
 
   if (status === "consent") {
@@ -400,6 +455,7 @@ export function ClashPointApp() {
   }
 
   const liveLabel = status === "paused" ? "PAUSED" : status === "stopped" ? "STOPPED" : status === "degraded" ? "DEGRADED" : "LIVE";
+  const inputDisabled = status === "paused" || status === "stopped";
 
   return (
     <main className="console-shell">
@@ -417,7 +473,7 @@ export function ClashPointApp() {
         </div>
       </header>
 
-      {notice && <div className="degraded-banner" role="status"><AlertTriangle aria-hidden="true" />{notice}</div>}
+      {(inputDisabled || notice) && <div className="degraded-banner" role="status"><AlertTriangle aria-hidden="true" />{inputDisabled ? `${liveLabel}: capture and analysis are suspended. Resume to continue.` : notice}</div>}
 
       <div className="console-body">
         <section className="transcript-panel" aria-labelledby="transcript-heading">
@@ -505,12 +561,12 @@ export function ClashPointApp() {
           </div>
           {mode === "manual" ? (
             <>
-              <input value={manualText} onChange={(event) => setManualText(event.target.value)} placeholder="Enter a final transcript turn…" aria-label="Transcript turn" />
-              <button type="submit" disabled={!manualText.trim() || processing}><Send aria-hidden="true" /> Submit turn</button>
+              <input disabled={inputDisabled} value={manualText} onChange={(event) => setManualText(event.target.value)} placeholder="Enter a final transcript turn…" aria-label="Transcript turn" />
+              <button type="submit" disabled={inputDisabled || !manualText.trim() || processing}><Send aria-hidden="true" /> Submit turn</button>
             </>
           ) : (
             <div className="microphone-control">
-              <button type="button" className={micActive ? "mic-button active" : "mic-button"} onClick={micActive ? () => recognitionRef.current?.stop() : startMicrophone}>
+              <button type="button" disabled={inputDisabled || processing} className={micActive ? "mic-button active" : "mic-button"} onClick={micActive ? () => recognitionRef.current?.stop() : startMicrophone}>
                 <Mic aria-hidden="true" />{micActive ? "Listening — click to stop" : `Listen as ${speaker.label}`}
               </button>
               <div className="microphone-readout" aria-live="polite">
@@ -525,7 +581,7 @@ export function ClashPointApp() {
       <footer className="control-rail">
         <div className="meeting-controls">
           {status === "paused" || status === "stopped" ? (
-            <button onClick={() => setStatus("active")}><Play aria-hidden="true" /> Resume</button>
+            <button onClick={() => transitionStatus("active")}><Play aria-hidden="true" /> Resume</button>
           ) : (
             <button onClick={pauseMeeting}><Pause aria-hidden="true" /> Pause</button>
           )}
@@ -539,7 +595,10 @@ export function ClashPointApp() {
           ))}
         </div>
         <div className="rail-action">
-          {mode === "script" && <button className="run-script" onClick={runScript} disabled={runningScript || processing}><Play aria-hidden="true" />{runningScript ? "Running script" : "Run demo script"}</button>}
+          {mode === "script" && <>
+            <button className="run-script" onClick={() => void runScript(true)} disabled={inputDisabled || runningScript || processing || scriptPosition === script.length}>Next demo beat</button>
+            <button onClick={() => void runScript()} disabled={inputDisabled || runningScript || processing || scriptPosition === script.length}><Play aria-hidden="true" />{runningScript ? "Running script" : scriptPosition === script.length ? "Demo complete" : "Run demo script"}</button>
+          </>}
           <span className="timing">{lastTiming === null ? "—" : lastTiming < 1 ? "<1 ms" : `${lastTiming} ms`}</span>
         </div>
       </footer>
@@ -615,8 +674,8 @@ function JudgeGuide({ cards, running }: { cards: ResolutionCard[]; running: bool
   const found = new Set(cards.flatMap((card) => card.evidence.map((item) => item.factId)));
   const completed = ["F-DEP-1", "F-LEGAL-1", "F-CAP-1"].filter((factId) => found.has(factId)).length;
   const guidance = [
-    "Run the demo script. Watch “Yeah” resolve against the blocker question—not as an isolated word.",
-    "Status warning found. Inspect GH-42, then let the script test the customer promise.",
+    "Choose Next demo beat to resolve “Yeah” against the blocker question. Advance each beat when ready.",
+    "Status warning found. Inspect GH-42, then choose Next demo beat to test the customer promise.",
     "Legal conflict found. Next, ClashPoint checks the P0 assignment against capacity.",
     "Golden path complete: context, legal policy, and capacity were all verified from source evidence.",
   ][completed];
