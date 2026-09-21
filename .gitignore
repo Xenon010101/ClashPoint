@@ -9,3 +9,7 @@ test-results/
 .vercel/
 .pnpm-store/
 *.tsbuildinfo
+.ppt-build/
+.codex-finalizer/
+deliverables/
+tmp/
