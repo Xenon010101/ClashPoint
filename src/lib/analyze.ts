@@ -1,5 +1,9 @@
 import { getAuthorizedFacts } from "./facts";
 import { resolveWithGemini } from "./gemini";
+import { features } from "@/config/features";
+import { explainEvidencePath } from "@/graphify/explain";
+import { projectFacts } from "@/graphify/project";
+import { findEvidencePath } from "@/graphify/query";
 import type {
   AnalyzeTurnRequest,
   AnalyzeTurnResponse,
@@ -345,64 +349,75 @@ export function detectCollision(
 ): CollisionRecord | null {
   if (lane === "ignore" || event.polarity === "negative" || event.eventType === "reversal") return null;
   const canonical = event.canonicalStatement.toLowerCase();
-  const active = (id: string) => facts.find((fact) => fact.factId === id && fact.status === "active");
+  const active = facts.filter((fact) => fact.status === "active");
+  const byType = (type: Fact["factType"]) => active.filter((fact) => fact.factType === type);
+  const first = (type: Fact["factType"]) => byType(type)[0];
+  const overlapsEvent = (fact: Fact) => event.entities.some((entity) =>
+    fact.entityKeys.some((key) => key.endsWith(`:${entity.value.toLowerCase().replaceAll(" ", "-")}`)),
+  );
   let collision: Omit<CollisionRecord, "collisionId" | "meetingId" | "eventId" | "status"> | null = null;
 
-  if (event.eventType === "status_change" && /blockers?.*cleared/.test(canonical) && active("F-DEP-1")) {
+  const dependency = first("dependency");
+  const approvalBlocker = first("approval_blocker");
+  const capacity = first("capacity");
+  const ownership = first("ownership");
+  const previousDecision = first("previous_decision");
+
+  if (event.eventType === "status_change" && /blockers?.*cleared/.test(canonical) && dependency) {
     collision = {
       collisionType: "status_mismatch",
       severity: "side_panel",
-      factIds: ["F-DEP-1"],
+      factIds: [dependency.factId],
       reasonCode: "asserted_status_not_supported",
     };
   } else if (
     event.eventType === "commitment" &&
-    /feature x/.test(canonical) &&
     !/pending|tentative/.test(canonical) &&
-    active("F-LEGAL-1")
+    approvalBlocker &&
+    overlapsEvent(approvalBlocker)
   ) {
     collision = {
       collisionType: "legal_or_policy",
       severity: "interrupt",
-      factIds: ["F-LEGAL-1"],
+      factIds: [approvalBlocker.factId],
       reasonCode: "conditional_requirement_unmet",
     };
   } else if (
     event.assignee?.toLowerCase() === "valya" &&
     event.priority?.toLowerCase() === "p0" &&
     lane === "immediate_check" &&
-    active("F-CAP-1")
+    capacity
   ) {
     collision = {
       collisionType: "capacity_conflict",
       severity: "interrupt",
-      factIds: ["F-CAP-1"],
+      factIds: [capacity.factId],
       reasonCode: "capacity_limit_reached",
     };
   } else if (
     event.eventType === "deadline" &&
-    /sso/.test(canonical) &&
     !/after auth refactor is complete/.test(canonical) &&
-    active("F-DEP-1")
+    dependency &&
+    overlapsEvent(dependency)
   ) {
     collision = {
       collisionType: "dependency_blocker",
       severity: event.certainty === "tentative" ? "side_panel" : "interrupt",
-      factIds: ["F-DEP-1"],
+      factIds: [dependency.factId],
       reasonCode: "active_blocker",
     };
-  } else if (event.assignee?.toLowerCase() === "valya" && /auth refactor/.test(canonical) && active("F-OWNER-1")) {
+  } else if (event.assignee && ownership && overlapsEvent(ownership) && String(ownership.structured.assignee ?? "").toLowerCase() !== event.assignee.toLowerCase()) {
     collision = {
       collisionType: "ownership_conflict",
       severity: "side_panel",
-      factIds: ["F-OWNER-1"],
+      factIds: [ownership.factId],
       reasonCode: "known_owner_mismatch",
     };
-  } else if (event.eventType === "decision" && /custom export.*acme/.test(canonical) && active("F-DEC-1")) {
+  } else if (event.eventType === "decision" && previousDecision && overlapsEvent(previousDecision)) {
     collision = {
       collisionType: "previous_decision",
       severity: lane === "quiet_check" ? "side_panel" : "interrupt",
-      factIds: ["F-DEC-1"],
+      factIds: [previousDecision.factId],
       reasonCode: "contradicts_recorded_decision",
     };
   }
@@ -455,6 +470,7 @@ export function verifyAndBuildCard(
   collision: CollisionRecord | null,
   facts: Fact[],
   eventQuote: string,
+  evidencePath: ResolutionCard["evidencePath"] = [],
 ): ResolutionCard | null {
   if (!collision) return null;
   const evidenceFacts = collision.factIds
@@ -483,6 +499,7 @@ export function verifyAndBuildCard(
     freshness: "No superseding record was found in connected demo sources.",
     whyItMatters: copy.why,
     saferWording: copy.safer,
+    evidencePath,
   };
 }
 
@@ -509,7 +526,15 @@ export async function analyzeTurn(input: AnalyzeTurnRequest): Promise<AnalyzeTur
   const collisionMs = performance.now() - collisionStart;
 
   const verificationStart = performance.now();
-  const card = verifyAndBuildCard(collision, authorizedFacts, input.currentTurn.textRaw);
+  const graph = features.graphify ? projectFacts(authorizedFacts) : null;
+  const entityIds = event.entities.map((entity) => `${entity.type}:${entity.value.toLowerCase().replaceAll(" ", "-")}`);
+  const path = graph && collision ? findEvidencePath(graph, entityIds, collision.factIds) : null;
+  const card = verifyAndBuildCard(
+    collision,
+    authorizedFacts,
+    input.currentTurn.textRaw,
+    graph ? explainEvidencePath(graph, path) : [],
+  );
   const verificationMs = performance.now() - verificationStart;
 
   return {

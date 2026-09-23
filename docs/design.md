@@ -103,6 +103,10 @@ The newest resolution card is expanded. Older cards collapse to severity, trigge
 
 `POST /api/analyze-turn` accepts the current final turn plus at most eight recent turns, a fixed demo principal, and an optional fixture variant. It returns the normalized event, gate decision, verified collision/card, capability state, and stage timings.
 
+### Graphify evidence path
+
+Graphify is an in-memory, deterministic projection of **authorised active facts**. It is not a source of truth and it never turns transcript context into evidence. For a verified card, the server may return a bounded, cycle-safe path from the event entity to a stored fact and its source. The evidence drawer renders only labels and fact IDs already present in the server response.
+
 `GET /api/evaluation` executes the fixed 27-case corpus without persistence and returns measured accuracy, grounding, false-interruption, latency, and per-case outcomes. The response is `no-store` so the drawer represents the current code path.
 
 Pipeline:

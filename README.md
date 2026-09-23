@@ -2,7 +2,7 @@
 
 # ClashPoint
 
-ClashPoint is a real-time decision-consistency copilot for meetings. It resolves commitments, approvals, deadlines, assignments, and status claims from conversational context, checks them against authorized company facts, and presents exact source evidence when the meeting and the recorded reality disagree. This repository is a hackathon demo: GitHub and Notion are represented by clearly labeled, server-side fixtures; the analysis and evidence-verification path is real.
+ClashPoint is a real-time decision-consistency copilot for meetings. It resolves commitments, approvals, deadlines, assignments, and status claims from conversational context, checks them against authorized company facts, and presents exact source evidence when the meeting and the recorded reality disagree. Its in-memory Graphify projection explains the evidence path behind a warning; it is derived from authorised active facts, never treated as a second source of truth. This repository is a hackathon demo: GitHub and Notion are represented by clearly labeled, server-side fixtures; the analysis and evidence-verification path is real.
 
 ## Run locally
 
@@ -39,7 +39,7 @@ Guided Judge Mode is enabled by default. It advances through Context → Policy 
 2. Choose **Next demo beat**. Maya asks, “Are all the Acme blockers cleared?” Diego answers, “Yeah.” ClashPoint resolves the short reply and shows a yellow status mismatch grounded in GitHub issue GH-42. Inspect it before advancing.
 3. Advance the next beat. Maya says, “Okay. Let’s promise Feature X to Acme by Friday.” ClashPoint shows a red policy conflict with the exact Notion fixture and safer wording.
 4. Advance again. Maya says, “Fine. Make the new work P0 and give it to Valya.” ClashPoint shows a deterministic capacity conflict.
-5. Open an evidence drawer to show source, revision, freshness, and the **Demo fixture** label.
+5. Open an evidence drawer to show source, revision, freshness, the **Demo fixture** label, and the bounded Graphify evidence path.
 6. Open **EVAL 27** and show that all 27 frozen language/safety cases were measured, including grounded-evidence rate and false interruptions.
 7. Reset, switch to Manual or Microphone, and demonstrate that every input mode uses the same analysis endpoint.
 

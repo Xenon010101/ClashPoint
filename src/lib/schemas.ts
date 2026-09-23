@@ -116,6 +116,7 @@ export const ResolutionCardSchema = z.object({
   freshness: z.string(),
   whyItMatters: z.string(),
   saferWording: z.string().nullable(),
+  evidencePath: z.array(z.object({ relation: z.string(), label: z.string() })).default([]),
 });
 
 export const AnalyzeTurnRequestSchema = z.object({

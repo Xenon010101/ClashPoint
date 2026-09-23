@@ -8,7 +8,7 @@ import {
   verifyAndBuildCard,
 } from "./analyze";
 import { getAuthorizedFacts } from "./facts";
-import type { TranscriptTurn } from "./schemas";
+import type { ConversationEvent, Fact, TranscriptTurn } from "./schemas";
 
 function turn(index: number, textRaw: string, speakerLabel = "Maya"): TranscriptTurn {
   return {
@@ -86,6 +86,29 @@ describe("evidence and collisions", () => {
     });
     expect(result.collision?.collisionType).toBe("capacity_conflict");
     expect(result.card?.evidence[0].factId).toBe("F-CAP-1");
+  });
+
+  it("applies the approval rule to a differently named fixture without a demo fact ID", () => {
+    const event: ConversationEvent = {
+      eventId: "evt_contoso", meetingId: "mtg_test", eventType: "commitment", certainty: "committed",
+      canonicalStatement: "Promise Inventory Sync to Contoso by Friday.", actorId: "maya",
+      entities: [{ type: "feature", value: "Inventory Sync" }, { type: "customer", value: "Contoso" }],
+      deadline: "Friday", assignee: null, priority: null, polarity: "positive", sourceTurnIds: ["t1"], contextResolved: true,
+    };
+    const fact: Fact = {
+      ...getAuthorizedFacts("demo_product", "default").find((item) => item.factType === "approval_blocker")!,
+      factId: "fact:contoso:approval", entityKeys: ["feature:inventory-sync", "customer:contoso"],
+    };
+    expect(detectCollision(event, [fact], "immediate_check")?.factIds).toEqual(["fact:contoso:approval"]);
+  });
+
+  it("returns an evidence path made only from stored facts", async () => {
+    const result = await analyzeTurn({
+      meetingId: "mtg_test", principalId: "demo_product", recentTurns: [],
+      currentTurn: turn(1, "SSO ships this Friday."), factsVariant: "default",
+    });
+    expect(result.card?.evidencePath.map((step) => step.label)).toContain("sso");
+    expect(result.card?.evidencePath.map((step) => step.label)).toContain("SSO release is blocked by Auth Refactor. GH-42 remains open.");
   });
 
   it("rejects unknown fact IDs during verification", () => {

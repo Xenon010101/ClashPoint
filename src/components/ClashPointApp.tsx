@@ -755,6 +755,14 @@ function EvidenceDrawer({ card, onClose }: { card: ResolutionCard; onClose: () =
           <div><dt>Observed</dt><dd>{new Date(evidence.observedAt).toLocaleString()}</dd></div>
           <div><dt>Revision</dt><dd>{evidence.sourceRevision}</dd></div>
         </dl>
+        {card.evidencePath.length > 0 && (
+          <section className="evidence-path" aria-labelledby="evidence-path-title">
+            <span id="evidence-path-title">Why ClashPoint interrupted</span>
+            <ol>
+              {card.evidencePath.map((step, index) => <li key={`${step.relation}-${step.label}-${index}`}><small>{step.relation}</small><strong>{step.label}</strong></li>)}
+            </ol>
+          </section>
+        )}
         <div className="freshness"><Check aria-hidden="true" /><div><strong>Freshness verified</strong><span>{card.freshness}</span></div></div>
         <a href={evidence.sourceUrl} target="_blank" rel="noreferrer">Open demo source <ExternalLink aria-hidden="true" /></a>
       </aside>
