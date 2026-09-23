@@ -1,0 +1,40 @@
+name: Feature
+description: Propose one bounded ClashPoint feature
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Intended file paths
+      description: List the files or directories this issue owns.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies / blocked by
+  - type: textarea
+    id: tests
+    attributes:
+      label: Required tests
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Merge risk
+      options:
+        - Parallel-safe
+        - Shared module
+        - Hotspot
+    validations:
+      required: true

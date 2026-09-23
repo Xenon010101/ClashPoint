@@ -25,7 +25,8 @@ This file constrains every implementation and review session in this repository.
 ## Demo boundary
 
 - GitHub and Notion data in this repository are seeded fixtures and must be labeled **Demo fixture** in the UI and documentation.
-- Do not add OAuth, webhooks, persistent databases, autonomous source mutations, production authentication, or enterprise abstractions unless the project scope is explicitly changed.
+- Graphify and read-only source adapters are now in scope when they preserve the trust invariants in this document. A graph is a derived projection, never a second source of truth.
+- Do not add OAuth, webhooks, persistent databases, autonomous source mutations, production authentication, or enterprise abstractions unless the project scope is explicitly changed again.
 - Do not expose secrets in browser code, logs, fixtures, `.env.example`, or error messages.
 
 ## Engineering rules

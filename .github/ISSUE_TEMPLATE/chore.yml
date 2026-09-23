@@ -1,0 +1,25 @@
+name: Chore
+description: Propose a no-behaviour-change maintenance task
+body:
+  - type: textarea
+    id: goal
+    attributes: { label: Goal }
+    validations: { required: true }
+  - type: textarea
+    id: paths
+    attributes: { label: Files owned }
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes: { label: Definition of done }
+    validations: { required: true }
+  - type: textarea
+    id: dependencies
+    attributes: { label: Dependencies }
+  - type: checkboxes
+    id: no_behaviour_change
+    attributes:
+      label: Confirmation
+      options:
+        - label: This task intentionally changes no product behaviour.
+          required: true
