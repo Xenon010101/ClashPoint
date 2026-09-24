@@ -43,6 +43,8 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **TEST-01** Unit-test schemas, resolver, gate, ACL, retrieval, collision checks, supersession, and verifier. Acceptance: required safety and golden fixtures pass.
 - [x] **GRAPH-01** Add an in-memory Graphify projection. Acceptance: it projects only authorised active facts, is idempotent, and cannot create evidence from conversation context.
 - [x] **GRAPH-02** Add bounded evidence-path explanations. Acceptance: a verified conflict can expose a cycle-safe path with stored fact IDs in the evidence drawer.
+- [x] **SOURCE-01** Define the read-only SourceAdapter contract. Acceptance: adapters expose explicit health and refresh states without provider types, credentials, or verification logic leaking into the engine.
+- [x] **TEST-05** Add source/graph adversarial contracts. Acceptance: unavailable sources, prompt-injection-like transcript text, topic switching, ambiguous owners, and graph cycles cannot manufacture a conflict or hang analysis.
 - [x] **TEST-02** Test API success, invalid input, bounded context, restricted variant, approval variant, and provider failure. Acceptance: response contracts and failure language pass.
 - [x] **TEST-03** Add Playwright consent → script → evidence → reset and manual-input flows. Acceptance: stable in installed Edge.
 - [x] **TEST-04** Add frozen 27-case evaluation and read-only report route. Acceptance: all cases pass, every expected collision is grounded, and false interrupt count is zero.

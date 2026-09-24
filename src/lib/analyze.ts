@@ -254,6 +254,8 @@ export function resolveEvent(recentTurns: TranscriptTurn[], turn: TranscriptTurn
   }
 
   if (/\bp0\b/.test(lower) && /valya/.test(lower) && /(give|assign|owner|take)/.test(lower)) {
+    // Multiple named people make the intended owner ambiguous; do not choose one.
+    if (/\b(diego|maya)\b/.test(lower)) return event;
     return {
       ...event,
       eventType: "assignment",
