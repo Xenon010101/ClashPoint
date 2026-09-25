@@ -5,14 +5,10 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  CircleStop,
   FileText,
   GitBranch,
   ListChecks,
   Mic,
-  Pause,
-  Play,
-  RotateCcw,
   Send,
   ShieldCheck,
   X,
@@ -28,6 +24,7 @@ import type {
 import { EvidenceDrawer } from "./decisions/EvidenceDrawer";
 import { JudgeGuide } from "./decisions/JudgeGuide";
 import { ResolutionCardView } from "./decisions/ResolutionCardView";
+import { ControlRail } from "./meeting/ControlRail";
 
 type InputMode = "script" | "manual" | "microphone";
 type MeetingStatus = "consent" | "active" | "paused" | "stopped" | "degraded";
@@ -237,6 +234,24 @@ export function ClashPointApp() {
         setStage("idle");
       }
     }
+  }, []);
+
+  const createReceipt = useCallback(async (card: ResolutionCard) => {
+    const eventId = card.collisionId.replace(/^col_/, "");
+    const response = await fetch("/api/receipts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        meetingId: "mtg_acme_review",
+        principalId: "demo_product",
+        eventId,
+        acceptedWording: card.saferWording ?? card.eventQuote,
+        factIds: card.evidence.map((evidence) => evidence.factId),
+        collisionId: card.collisionId,
+        graphPathIds: card.evidencePath.map((step) => `${step.relation}:${step.label}`),
+      }),
+    });
+    setNotice(response.ok ? "Decision receipt created from the verified evidence snapshot." : "Decision receipt could not be created from the current evidence.");
   }, []);
 
   const startMeeting = () => {
@@ -535,6 +550,7 @@ export function ClashPointApp() {
                   compact={index > 0 && !expandedCardIds.has(card.cardId)}
                   onExpand={() => setExpandedCardIds((ids) => new Set(ids).add(card.cardId))}
                   onInspect={() => setSelectedCard(card)}
+                  onRecord={() => void createReceipt(card)}
                   onDismiss={() => setCards((items) => items.filter((item) => item.cardId !== card.cardId))}
                 />
               ))
@@ -579,30 +595,7 @@ export function ClashPointApp() {
         </form>
       )}
 
-      <footer className="control-rail">
-        <div className="meeting-controls">
-          {status === "paused" || status === "stopped" ? (
-            <button onClick={() => transitionStatus("active")}><Play aria-hidden="true" /> Resume</button>
-          ) : (
-            <button onClick={pauseMeeting}><Pause aria-hidden="true" /> Pause</button>
-          )}
-          <button onClick={stopMeeting}><CircleStop aria-hidden="true" /> Stop</button>
-          <button onClick={reset}><RotateCcw aria-hidden="true" /> Reset</button>
-          <button className={judgeMode ? "judge-toggle active" : "judge-toggle"} onClick={() => setJudgeMode((enabled) => !enabled)} aria-pressed={judgeMode}><ListChecks aria-hidden="true" /> Judge guide</button>
-        </div>
-        <div className="mode-tabs" aria-label="Input mode">
-          {(["script", "manual", "microphone"] as InputMode[]).map((item) => (
-            <button key={item} className={mode === item ? "active" : ""} onClick={() => changeMode(item)}>{item}</button>
-          ))}
-        </div>
-        <div className="rail-action">
-          {mode === "script" && <>
-            <button className="run-script" onClick={() => void runScript(true)} disabled={inputDisabled || runningScript || processing || scriptPosition === script.length}>Next demo beat</button>
-            <button onClick={() => void runScript()} disabled={inputDisabled || runningScript || processing || scriptPosition === script.length}><Play aria-hidden="true" />{runningScript ? "Running script" : scriptPosition === script.length ? "Demo complete" : "Run demo script"}</button>
-          </>}
-          <span className="timing">{lastTiming === null ? "—" : lastTiming < 1 ? "<1 ms" : `${lastTiming} ms`}</span>
-        </div>
-      </footer>
+      <ControlRail status={status} judgeMode={judgeMode} mode={mode} inputDisabled={inputDisabled} runningScript={runningScript} processing={processing} scriptPosition={scriptPosition} scriptLength={script.length} lastTiming={lastTiming} onResume={() => transitionStatus("active")} onPause={pauseMeeting} onStop={stopMeeting} onReset={reset} onJudgeMode={() => setJudgeMode((enabled) => !enabled)} onMode={changeMode} onNextBeat={() => void runScript(true)} onRunScript={() => void runScript()} />
 
       {selectedCard && <EvidenceDrawer card={selectedCard} onClose={() => setSelectedCard(null)} />}
       {evaluationOpen && (
