@@ -45,6 +45,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **GRAPH-02** Add bounded evidence-path explanations. Acceptance: a verified conflict can expose a cycle-safe path with stored fact IDs in the evidence drawer.
 - [x] **SOURCE-01** Define the read-only SourceAdapter contract. Acceptance: adapters expose explicit health and refresh states without provider types, credentials, or verification logic leaking into the engine.
 - [x] **SOURCE-02** Add GitHub issue normalisation. Acceptance: a read-only issue payload deterministically produces a revisioned SourceObject and atomic state, label, and assignee facts; it never infers dependencies from free text.
+- [x] **SOURCE-03** Add server-only GitHub issue client. Acceptance: it is disabled by default, uses bounded read-only requests and optional ETags, and exposes invalid configuration, unchanged data, and provider failure explicitly.
 - [x] **TEST-05** Add source/graph adversarial contracts. Acceptance: unavailable sources, prompt-injection-like transcript text, topic switching, ambiguous owners, and graph cycles cannot manufacture a conflict or hang analysis.
 - [x] **TEST-02** Test API success, invalid input, bounded context, restricted variant, approval variant, and provider failure. Acceptance: response contracts and failure language pass.
 - [x] **TEST-03** Add Playwright consent → script → evidence → reset and manual-input flows. Acceptance: stable in installed Edge.
