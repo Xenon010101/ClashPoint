@@ -5,9 +5,7 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  ChevronRight,
   CircleStop,
-  ExternalLink,
   FileText,
   GitBranch,
   ListChecks,
@@ -27,6 +25,9 @@ import type {
   ResolutionCard,
   TranscriptTurn,
 } from "@/lib/schemas";
+import { EvidenceDrawer } from "./decisions/EvidenceDrawer";
+import { JudgeGuide } from "./decisions/JudgeGuide";
+import { ResolutionCardView } from "./decisions/ResolutionCardView";
 
 type InputMode = "script" | "manual" | "microphone";
 type MeetingStatus = "consent" | "active" | "paused" | "stopped" | "degraded";
@@ -670,102 +671,3 @@ function EvaluationDrawer({
   );
 }
 
-function JudgeGuide({ cards, running }: { cards: ResolutionCard[]; running: boolean }) {
-  const found = new Set(cards.flatMap((card) => card.evidence.map((item) => item.factId)));
-  const completed = ["F-DEP-1", "F-LEGAL-1", "F-CAP-1"].filter((factId) => found.has(factId)).length;
-  const guidance = [
-    "Choose Next demo beat to resolve “Yeah” against the blocker question. Advance each beat when ready.",
-    "Status warning found. Inspect GH-42, then choose Next demo beat to test the customer promise.",
-    "Legal conflict found. Next, ClashPoint checks the P0 assignment against capacity.",
-    "Golden path complete: context, legal policy, and capacity were all verified from source evidence.",
-  ][completed];
-
-  return (
-    <aside className="judge-guide" aria-label="Guided judge demo">
-      <div className="judge-guide-head">
-        <span>Judge guide</span>
-        <strong>{completed}/3 checks</strong>
-      </div>
-      <p>{running ? "Demo running — follow the decision cards as they arrive." : guidance}</p>
-      <div className="judge-beats" aria-hidden="true">
-        {["Context", "Policy", "Capacity"].map((label, index) => (
-          <span key={label} className={completed > index ? "complete" : completed === index ? "current" : ""}>
-            <i>{completed > index ? <Check /> : index + 1}</i>{label}
-          </span>
-        ))}
-      </div>
-    </aside>
-  );
-}
-
-function ResolutionCardView({
-  card,
-  compact,
-  onExpand,
-  onInspect,
-  onDismiss,
-}: {
-  card: ResolutionCard;
-  compact: boolean;
-  onExpand: () => void;
-  onInspect: () => void;
-  onDismiss: () => void;
-}) {
-  const isInterrupt = card.severity === "interrupt";
-  return (
-    <article className={`resolution-card ${isInterrupt ? "interrupt" : "warning"} ${compact ? "compact" : ""}`} tabIndex={-1}>
-      <header>
-        <div className="severity"><AlertTriangle aria-hidden="true" /><span>{isInterrupt ? "CONFLICT" : "WARNING"}</span><i>·</i>{card.title}</div>
-        <span className="fact-id">{card.evidence[0]?.factId}</span>
-      </header>
-      {compact ? (
-        <div className="compact-card-body">
-          <p>“{card.eventQuote}”</p>
-          <span>{card.evidence[0]?.source} · {card.evidence[0]?.sourceDate}</span>
-          <button onClick={onExpand}>Expand decision <ChevronRight aria-hidden="true" /></button>
-        </div>
-      ) : (
-        <>
-      <div className="card-grid">
-        <div><span className="card-label">You said</span><p>“{card.eventQuote}”</p></div>
-        <div><span className="card-label">Conflicts with</span><blockquote>“{card.evidence[0]?.quote}”</blockquote><small>{card.evidence[0]?.source} · {card.evidence[0]?.sourceDate}</small></div>
-      </div>
-      <div className="card-reason"><span>Why this matters</span><p>{card.whyItMatters}</p></div>
-      {card.saferWording && <div className="safer"><span>Safer version</span><p>“{card.saferWording}”</p></div>}
-      <footer><button onClick={onInspect}>Inspect evidence <ChevronRight aria-hidden="true" /></button><button onClick={onDismiss}>Dismiss</button></footer>
-        </>
-      )}
-    </article>
-  );
-}
-
-function EvidenceDrawer({ card, onClose }: { card: ResolutionCard; onClose: () => void }) {
-  const evidence = card.evidence[0];
-  return (
-    <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
-      <aside className="evidence-drawer" role="dialog" aria-modal="true" aria-labelledby="evidence-title">
-        <header><div><span>Verified evidence</span><h2 id="evidence-title">{evidence.source}</h2></div><button autoFocus onClick={onClose} aria-label="Close evidence"><X aria-hidden="true" /></button></header>
-        <div className="fixture-badge">Demo fixture</div>
-        <blockquote>“{evidence.quote}”</blockquote>
-        <dl>
-          <div><dt>Source system</dt><dd>{evidence.sourceSystem}</dd></div>
-          <div><dt>Object</dt><dd>{evidence.sourceObjectId}</dd></div>
-          <div><dt>Fact ID</dt><dd>{evidence.factId}</dd></div>
-          <div><dt>Status</dt><dd className="active-status">{evidence.status}</dd></div>
-          <div><dt>Observed</dt><dd>{new Date(evidence.observedAt).toLocaleString()}</dd></div>
-          <div><dt>Revision</dt><dd>{evidence.sourceRevision}</dd></div>
-        </dl>
-        {card.evidencePath.length > 0 && (
-          <section className="evidence-path" aria-labelledby="evidence-path-title">
-            <span id="evidence-path-title">Why ClashPoint interrupted</span>
-            <ol>
-              {card.evidencePath.map((step, index) => <li key={`${step.relation}-${step.label}-${index}`}><small>{step.relation}</small><strong>{step.label}</strong></li>)}
-            </ol>
-          </section>
-        )}
-        <div className="freshness"><Check aria-hidden="true" /><div><strong>Freshness verified</strong><span>{card.freshness}</span></div></div>
-        <a href={evidence.sourceUrl} target="_blank" rel="noreferrer">Open demo source <ExternalLink aria-hidden="true" /></a>
-      </aside>
-    </div>
-  );
-}

@@ -15,6 +15,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **UI-01** Build consent/start screen. Depends: APP-01. Acceptance: disclosure, meeting, two labeled demo sources, mode choice, and start action are keyboard accessible.
 - [x] **UI-02** Build console layout and tokens. Depends: APP-01. Acceptance: 36/64 desktop split, fixed header/control rail, responsive stack, no generic AI decoration.
 - [x] **UI-03** Build transcript, current event, card, activity, composer, and drawer components. Depends: UI-02. Acceptance: all design states render from fixture props and drawer is keyboard operable.
+- [x] **UI-03A** Extract decision UI seams. Acceptance: Judge Guide, Resolution Card, and Evidence Drawer are independently owned components with visual and behavioural parity.
 
 ## Phase 2 — Deterministic pipeline (P0)
 
