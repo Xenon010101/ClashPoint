@@ -57,3 +57,14 @@ test("manual turns use the same verified analysis pipeline", async ({ page }) =>
   await expect(page.getByRole("article").filter({ hasText: "Commitment conflict" })).toBeVisible();
   await expect(page.getByText("Do not proceed with Feature X until the DPA update is approved.")).toBeVisible();
 });
+
+test("a verified card can create an evidence-backed decision receipt", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await page.getByRole("button", { name: /manual/i }).click();
+  await page.getByRole("button", { name: /Start ClashPoint/ }).click();
+  await page.getByLabel("Transcript turn").fill("Let’s promise Feature X to Acme by Friday.");
+  await page.getByRole("button", { name: "Submit turn" }).click();
+  await page.getByRole("button", { name: "Create receipt" }).click();
+  await expect(page.getByRole("status")).toContainText("Decision receipt created from the verified evidence snapshot.");
+});

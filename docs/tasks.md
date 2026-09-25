@@ -15,7 +15,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **UI-01** Build consent/start screen. Depends: APP-01. Acceptance: disclosure, meeting, two labeled demo sources, mode choice, and start action are keyboard accessible.
 - [x] **UI-02** Build console layout and tokens. Depends: APP-01. Acceptance: 36/64 desktop split, fixed header/control rail, responsive stack, no generic AI decoration.
 - [x] **UI-03** Build transcript, current event, card, activity, composer, and drawer components. Depends: UI-02. Acceptance: all design states render from fixture props and drawer is keyboard operable.
-- [x] **UI-03A** Extract decision UI seams. Acceptance: Judge Guide, Resolution Card, and Evidence Drawer are independently owned components with visual and behavioural parity.
+- [x] **UI-03A** Extract decision and control UI seams. Acceptance: Judge Guide, Resolution Card, Evidence Drawer, and Control Rail are independently owned components with visual and behavioural parity.
 
 ## Phase 2 — Deterministic pipeline (P0)
 
@@ -58,6 +58,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **TEST-05** Add source/graph adversarial contracts. Acceptance: unavailable sources, prompt-injection-like transcript text, topic switching, ambiguous owners, and graph cycles cannot manufacture a conflict or hang analysis.
 - [x] **TEST-02** Test API success, invalid input, bounded context, restricted variant, approval variant, and provider failure. Acceptance: response contracts and failure language pass.
 - [x] **TEST-03** Add Playwright consent → script → evidence → reset and manual-input flows. Acceptance: stable in installed Edge.
+- [x] **TEST-03A** Add receipt creation browser coverage. Acceptance: a verified manual conflict creates a server-validated Decision Receipt from the displayed evidence IDs.
 - [x] **TEST-04** Add frozen 27-case evaluation and read-only report route. Acceptance: all cases pass, every expected collision is grounded, and false interrupt count is zero.
 - [x] **UI-06** Add measured evaluation drawer. Depends: TEST-04. Acceptance: aggregates and all 27 case outcomes load from `GET /api/evaluation`; no metric is decorative.
 - [x] **VIS-01** Capture required 1440×900 and 1920×1080 states. Acceptance: no clipping, overflow, hidden controls, or illegible metadata.
