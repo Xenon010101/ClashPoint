@@ -1,4 +1,4 @@
-import type { Decision, DecisionReceipt } from "@/domain/decisions/schema";
+import { DecisionReceiptSchema, type Decision, type DecisionReceipt } from "@/domain/decisions/schema";
 import type { FactV2 } from "@/domain/facts/schema";
 
 export type ReceiptBuildInput = {
@@ -36,9 +36,7 @@ export function buildDecisionReceipt(input: ReceiptBuildInput): ReceiptBuildResu
     return { state: "rejected", message: "A checked evidence fact is not authorised for this principal." };
   }
 
-  return {
-    state: "complete",
-    receipt: {
+  const parsed = DecisionReceiptSchema.safeParse({
       schemaVersion: 2,
       receiptId: `receipt:${input.decision.decisionId}:${input.createdAt}`,
       workspaceId: input.decision.workspaceId,
@@ -59,6 +57,8 @@ export function buildDecisionReceipt(input: ReceiptBuildInput): ReceiptBuildResu
         sourceRevision: fact.sourceRevision,
         status: fact.status,
       })),
-    },
-  };
+  });
+  return parsed.success
+    ? { state: "complete", receipt: parsed.data }
+    : { state: "rejected", message: "The receipt did not satisfy the canonical contract." };
 }

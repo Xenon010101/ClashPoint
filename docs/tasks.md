@@ -50,6 +50,11 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **SOURCE-04** Assemble the read-only GitHub adapter. Acceptance: configured issue refreshes produce authorised normalised facts; unchanged and unavailable source states remain distinct; it is not yet connected to the meeting-analysis pipeline.
 - [x] **RECEIPT-01** Add deterministic Decision Receipt builder. Acceptance: accepted wording, verifier outcome, graph-path IDs, and immutable-by-convention source revision snapshots are created only from authorised active facts.
 - [x] **DOMAIN-01** Add legacy-to-v2 adapters. Acceptance: current event and fact contracts can migrate additively while preserving raw text, source wording, ACLs, revisions, and supersession state.
+- [x] **SOURCE-05** Add GitHub source configuration boundary. Acceptance: live source remains opt-in, repository configuration is validated, and the configured adapter receives a fixed demo principal ACL.
+- [x] **SOURCE-06** Add GitHub source health endpoint. Acceptance: disabled configuration produces an explicit 503 unavailable state without network access.
+- [x] **SOURCE-07** Add manual GitHub issue refresh endpoint. Acceptance: identifier validation happens before source access; disabled, unchanged, and refreshed outcomes remain distinguishable.
+- [x] **GRAPH-03** Project v2 facts into Graphify. Acceptance: authoritative v2 dependency/approval edges retain the originating Fact ID.
+- [x] **RECEIPT-02** Validate final Decision Receipts at runtime. Acceptance: receipt output is parsed through the canonical Zod contract before it can be returned.
 - [x] **TEST-05** Add source/graph adversarial contracts. Acceptance: unavailable sources, prompt-injection-like transcript text, topic switching, ambiguous owners, and graph cycles cannot manufacture a conflict or hang analysis.
 - [x] **TEST-02** Test API success, invalid input, bounded context, restricted variant, approval variant, and provider failure. Acceptance: response contracts and failure language pass.
 - [x] **TEST-03** Add Playwright consent → script → evidence → reset and manual-input flows. Acceptance: stable in installed Edge.
