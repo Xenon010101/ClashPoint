@@ -1,5 +1,6 @@
 import { getAuthorizedFacts } from "./facts";
 import { resolveWithGemini } from "./gemini";
+import { createDeterministicEventExtractor } from "@/engine/extraction/deterministic";
 import { features } from "@/config/features";
 import { explainEvidencePath } from "@/graphify/explain";
 import { projectFacts } from "@/graphify/project";
@@ -508,7 +509,14 @@ export function verifyAndBuildCard(
 export async function analyzeTurn(input: AnalyzeTurnRequest): Promise<AnalyzeTurnResponse> {
   const totalStart = performance.now();
   const resolverStart = performance.now();
-  let event = resolveEvent(input.recentTurns, input.currentTurn);
+  const deterministic = await createDeterministicEventExtractor(resolveEvent).extract({
+    workspaceId: "demo",
+    recentTurns: input.recentTurns,
+    currentTurn: input.currentTurn,
+  });
+  let event = deterministic.state === "unavailable"
+    ? resolveEvent(input.recentTurns, input.currentTurn)
+    : deterministic.event;
   const raw = input.currentTurn.textRaw.trim();
   const unresolvedReference = YES.test(raw) || NO.test(raw) || DAY.test(raw) || /give it to her|assign it to her/i.test(raw);
   const gemini = unresolvedReference

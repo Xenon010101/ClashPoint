@@ -1,6 +1,7 @@
 import { ConversationEventSchema, type ConversationEvent, type TranscriptTurn } from "./schemas";
 
-type GeminiResult = { event: ConversationEvent | null; state: "complete" | "skipped" | "unavailable" };
+export type GeminiResult = { event: ConversationEvent | null; state: "complete" | "skipped" | "unavailable" };
+export type GeminiSemanticResolver = (baseEvent: ConversationEvent, recentTurns: TranscriptTurn[], currentTurn: TranscriptTurn) => Promise<GeminiResult>;
 
 export async function resolveWithGemini(
   baseEvent: ConversationEvent,
