@@ -49,6 +49,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **SOURCE-03** Add server-only GitHub issue client. Acceptance: it is disabled by default, uses bounded read-only requests and optional ETags, and exposes invalid configuration, unchanged data, and provider failure explicitly.
 - [x] **SOURCE-04** Assemble the read-only GitHub adapter. Acceptance: configured issue refreshes produce authorised normalised facts; unchanged and unavailable source states remain distinct; it is not yet connected to the meeting-analysis pipeline.
 - [x] **RECEIPT-01** Add deterministic Decision Receipt builder. Acceptance: accepted wording, verifier outcome, graph-path IDs, and immutable-by-convention source revision snapshots are created only from authorised active facts.
+- [x] **DOMAIN-01** Add legacy-to-v2 adapters. Acceptance: current event and fact contracts can migrate additively while preserving raw text, source wording, ACLs, revisions, and supersession state.
 - [x] **TEST-05** Add source/graph adversarial contracts. Acceptance: unavailable sources, prompt-injection-like transcript text, topic switching, ambiguous owners, and graph cycles cannot manufacture a conflict or hang analysis.
 - [x] **TEST-02** Test API success, invalid input, bounded context, restricted variant, approval variant, and provider failure. Acceptance: response contracts and failure language pass.
 - [x] **TEST-03** Add Playwright consent → script → evidence → reset and manual-input flows. Acceptance: stable in installed Edge.
