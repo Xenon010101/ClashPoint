@@ -9,6 +9,7 @@ export type SourceHealth = {
 
 export type SourceRefreshResult =
   | { state: "complete"; sourceObject: SourceObject; facts: FactV2[]; unchanged: boolean }
+  | { state: "unchanged" }
   | { state: "unavailable"; message: string };
 
 /**
