@@ -7,6 +7,23 @@ import type { AnalyzeTurnRequest } from "@/lib/schemas";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("meeting lifecycle", () => {
+  it("restores focus to the evidence trigger after closing the drawer", async () => {
+    const result = await analyzeTurn({
+      meetingId: "mtg_acme_review", principalId: "demo_product", factsVariant: "default", recentTurns: [],
+      currentTurn: { turnId: "turn_001", meetingId: "mtg_acme_review", speakerId: "spk_maya", speakerLabel: "Maya", textRaw: "Let's promise Feature X to Acme by Friday.", isFinal: true, startedAt: "2026-09-26T00:00:00.000Z", endedAt: "2026-09-26T00:00:01.000Z" },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(result))));
+    render(<ClashPointApp />);
+    fireEvent.click(screen.getByRole("button", { name: /manual/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
+    fireEvent.change(screen.getByLabelText("Transcript turn"), { target: { value: "Let's promise Feature X to Acme by Friday." } });
+    fireEvent.click(screen.getByRole("button", { name: /Submit turn/ }));
+    const inspect = await screen.findByRole("button", { name: /Inspect evidence/ });
+    fireEvent.click(inspect);
+    fireEvent.click(await screen.findByRole("button", { name: "Close evidence" }));
+    await waitFor(() => expect(inspect).toHaveFocus());
+  });
+
   it("reports an unavailable optional live source without changing demo-source readiness", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ state: "unavailable", message: "GitHub source is not configured." }), { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);

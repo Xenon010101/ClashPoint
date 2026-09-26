@@ -120,6 +120,7 @@ export function ClashPointApp() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+  const evidenceTriggerRef = useRef<HTMLElement | null>(null);
 
   const transitionStatus = (next: MeetingStatus) => {
     statusRef.current = next;
@@ -277,6 +278,16 @@ export function ClashPointApp() {
     });
     setNotice(response.ok ? "Decision receipt created from the verified evidence snapshot." : "Decision receipt could not be created from the current evidence.");
   }, []);
+
+  const openEvidence = (card: ResolutionCard, trigger: HTMLButtonElement) => {
+    evidenceTriggerRef.current = trigger;
+    setSelectedCard(card);
+  };
+
+  const closeEvidence = () => {
+    setSelectedCard(null);
+    window.requestAnimationFrame(() => evidenceTriggerRef.current?.focus());
+  };
 
   const startMeeting = () => {
     transitionStatus("active");
@@ -582,7 +593,7 @@ export function ClashPointApp() {
                   key={card.cardId}
                   compact={index > 0 && !expandedCardIds.has(card.cardId)}
                   onExpand={() => setExpandedCardIds((ids) => new Set(ids).add(card.cardId))}
-                  onInspect={() => setSelectedCard(card)}
+                  onInspect={(trigger) => openEvidence(card, trigger)}
                   onRecord={() => void createReceipt(card)}
                   onDismiss={() => setCards((items) => items.filter((item) => item.cardId !== card.cardId))}
                 />
@@ -630,7 +641,7 @@ export function ClashPointApp() {
 
       <ControlRail status={status} judgeMode={judgeMode} mode={mode} inputDisabled={inputDisabled} runningScript={runningScript} processing={processing} scriptPosition={scriptPosition} scriptLength={script.length} lastTiming={lastTiming} onResume={() => transitionStatus("active")} onPause={pauseMeeting} onStop={stopMeeting} onReset={reset} onJudgeMode={() => setJudgeMode((enabled) => !enabled)} onMode={changeMode} onNextBeat={() => void runScript(true)} onRunScript={() => void runScript()} />
 
-      {selectedCard && <EvidenceDrawer card={selectedCard} onClose={() => setSelectedCard(null)} />}
+      {selectedCard && <EvidenceDrawer card={selectedCard} onClose={closeEvidence} />}
       {evaluationOpen && (
         <EvaluationDrawer
           report={evaluationReport}
