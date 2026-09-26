@@ -22,3 +22,14 @@ test("presenter advances three beats, pauses, and resets", async ({ page }) => {
   await expect(page.locator(".resolution-card")).toHaveCount(0);
   await expect(next).toBeEnabled();
 });
+
+test("scripted golden path completes within the 90-second judge budget", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Start ClashPoint/ }).click();
+  const startedAt = Date.now();
+  await page.getByRole("button", { name: "Run demo script" }).click();
+  await expect(page.locator(".resolution-card")).toHaveCount(3, { timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Demo complete" })).toBeDisabled();
+  expect(Date.now() - startedAt).toBeLessThan(90_000);
+});
