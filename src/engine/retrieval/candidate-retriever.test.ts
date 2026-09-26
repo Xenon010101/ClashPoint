@@ -14,4 +14,10 @@ describe("candidate retrieval", () => {
     const candidates = retrieveCandidates(event, facts);
     expect(candidates[0]).toMatchObject({ fact: { factId: "F-DEP-1" }, reasons: expect.any(Array) });
   });
+
+  it("does not retrieve a fact superseded by an approval", () => {
+    const event = adaptConversationEvent(resolveEvent([], { ...turn, textRaw: "Feature X ships Friday." }), "demo");
+    const facts = getAuthorizedFacts("demo_product", "approval").map((fact) => adaptLegacyFact(fact, "demo"));
+    expect(retrieveCandidates(event, facts).map((candidate) => candidate.fact.factId)).not.toContain("F-LEGAL-1");
+  });
 });

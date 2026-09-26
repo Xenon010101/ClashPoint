@@ -15,4 +15,10 @@ describe("generic verifier", () => {
     const facts = getAuthorizedFacts("demo_product", "default").map((fact) => adaptLegacyFact(fact, "demo"));
     expect(verifyEvent(event, facts, rules)).toMatchObject({ state: "conflict", collisionType: "legal_or_policy", factIds: ["F-LEGAL-1"] });
   });
+
+  it("does not verify against evidence superseded by an approval", () => {
+    const event = adaptConversationEvent(resolveEvent([], turn("Let's promise Feature X to Acme by Friday.")), "demo");
+    const facts = getAuthorizedFacts("demo_product", "approval").map((fact) => adaptLegacyFact(fact, "demo"));
+    expect(verifyEvent(event, facts, rules)).not.toMatchObject({ state: "conflict", factIds: ["F-LEGAL-1"] });
+  });
 });

@@ -58,6 +58,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **DOMAIN-02** Add entity alias registry. Acceptance: aliases resolve to stable IDs and duplicate labels abstain rather than creating entities.
 - [x] **DOMAIN-03** Add current-state resolver. Acceptance: superseded facts are excluded from current verification while successor facts remain available.
 - [x] **GRAPH-04** Add bounded impact queries. Acceptance: a changed prerequisite can identify dependent graph nodes with supporting Fact IDs.
+- [x] **DOMAIN-04** Enforce current-state filtering in v2 retrieval and verification. Acceptance: a superseded fact cannot be retrieved or yield a conflict through either engine seam.
 - [x] **TEST-05** Add source/graph adversarial contracts. Acceptance: unavailable sources, prompt-injection-like transcript text, topic switching, ambiguous owners, and graph cycles cannot manufacture a conflict or hang analysis.
 - [x] **TEST-02** Test API success, invalid input, bounded context, restricted variant, approval variant, and provider failure. Acceptance: response contracts and failure language pass.
 - [x] **TEST-03** Add Playwright consent → script → evidence → reset and manual-input flows. Acceptance: stable in installed Edge.
