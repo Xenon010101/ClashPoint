@@ -25,6 +25,16 @@ describe("read-only GitHub client", () => {
     expect(request.mock.calls[0][1].headers["If-None-Match"]).toBe("W/\"old\"");
   });
 
+  it("uses a server-only token without returning it or provider-error detail", async () => {
+    vi.stubEnv("GITHUB_ENABLED", "true");
+    vi.stubEnv("GITHUB_TOKEN", "demo-token-must-not-leak");
+    const request = vi.fn().mockRejectedValue(new Error("authorization failed: demo-token-must-not-leak"));
+    const result = await fetchGitHubIssue({ repository: "example/release", issueNumber: 42 }, request);
+    expect(request.mock.calls[0][1].headers.Authorization).toBe("Bearer demo-token-must-not-leak");
+    expect(result).toEqual({ state: "unavailable", message: "GitHub source is currently unavailable." });
+    expect(JSON.stringify(result)).not.toContain("demo-token-must-not-leak");
+  });
+
   it("represents unchanged and provider failures explicitly", async () => {
     vi.stubEnv("GITHUB_ENABLED", "true");
     await expect(fetchGitHubIssue({ repository: "example/release", issueNumber: 42 }, vi.fn().mockResolvedValue(new Response(null, { status: 304 })))).resolves.toEqual({ state: "unchanged" });
