@@ -62,6 +62,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **TEST-06** Cover accessibility and source boundaries in Edge. Acceptance: the checked browser path verifies modal focus return and confirms optional live-source availability never changes fixture readiness.
 - [x] **DEMO-04** Add an automated judge-time guard. Acceptance: the Edge scripted path produces all three verified cards and finishes within the documented 90-second budget.
 - [x] **SECURITY-01** Harden the optional GitHub error boundary. Acceptance: credentials remain server-only and provider failures cannot echo sensitive request detail into a result.
+- [x] **DEMO-05** Add a browser-ready smoke command. Acceptance: a documented command runs the non-screenshot Edge interaction checks for controls, modal focus, source boundaries, and the judge-time guard.
 - [x] **GRAPH-03** Project v2 facts into Graphify. Acceptance: authoritative v2 dependency/approval edges retain the originating Fact ID.
 - [x] **RECEIPT-02** Validate final Decision Receipts at runtime. Acceptance: receipt output is parsed through the canonical Zod contract before it can be returned.
 - [x] **DOMAIN-02** Add entity alias registry. Acceptance: aliases resolve to stable IDs and duplicate labels abstain rather than creating entities.

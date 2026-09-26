@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "demo:preflight": "pnpm test && pnpm build"
+    "demo:preflight": "pnpm test && pnpm build",
+    "demo:browser-check": "playwright test accessibility.spec.ts demo-controls.spec.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "latest",

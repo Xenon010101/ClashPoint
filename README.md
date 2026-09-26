@@ -80,9 +80,10 @@ pnpm build        # production build
 pnpm test         # unit and contract tests
 pnpm test:e2e     # Playwright golden path
 pnpm demo:preflight # test and production-build check before a demo
+pnpm demo:browser-check # Edge interaction smoke check; requires installed Microsoft Edge
 ```
 
-Before opening the app for judging, run `pnpm demo:preflight`, then follow [docs/MIC_REHEARSAL.md](./docs/MIC_REHEARSAL.md). The preflight validates the deterministic path only; it does not claim that a physical microphone permission check or deployment has occurred.
+Before opening the app for judging, run `pnpm demo:preflight`, then `pnpm demo:browser-check` when Edge is available, and follow [docs/MIC_REHEARSAL.md](./docs/MIC_REHEARSAL.md). The preflight validates the deterministic path only; it does not claim that a physical microphone permission check or deployment has occurred.
 
 Implementation invariants live in [agent.md](./agent.md), the UI and architecture contract in [docs/design.md](./docs/design.md), and the delivery checklist in [docs/tasks.md](./docs/tasks.md).
 
