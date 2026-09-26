@@ -34,3 +34,17 @@ test("optional live-source health remains separate from demo fixture readiness",
   await expect(page.getByRole("button", { name: "Check optional live GitHub source" })).toContainText("OFFLINE");
   await expect(page.getByText("DEMO SOURCES 2/2")).toBeVisible();
 });
+
+test("control-rail input mode communicates its selected state", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Start ClashPoint/ }).click();
+  const script = page.getByRole("button", { name: "script", exact: true });
+  const manual = page.getByRole("button", { name: "manual", exact: true });
+  const microphone = page.getByRole("button", { name: "microphone", exact: true });
+  await expect(script).toHaveAttribute("aria-pressed", "true");
+  await manual.click();
+  await expect(manual).toHaveAttribute("aria-pressed", "true");
+  await expect(script).toHaveAttribute("aria-pressed", "false");
+  await microphone.click();
+  await expect(microphone).toHaveAttribute("aria-pressed", "true");
+});
