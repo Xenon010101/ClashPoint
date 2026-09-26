@@ -7,6 +7,16 @@ import type { AnalyzeTurnRequest } from "@/lib/schemas";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("meeting lifecycle", () => {
+  it("reports an unavailable optional live source without changing demo-source readiness", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ state: "unavailable", message: "GitHub source is not configured." }), { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ClashPointApp />);
+    fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Check optional live GitHub source" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Check optional live GitHub source" })).toHaveTextContent("OFFLINE"));
+    expect(screen.getByText("DEMO SOURCES")).toBeVisible();
+  });
+
   it.each(["Reset", "Pause", "Stop"])("discards an in-flight result after %s", async (action) => {
     let deliver!: (response: Response) => void;
     let payload!: AnalyzeTurnRequest;

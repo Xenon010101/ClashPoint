@@ -44,6 +44,7 @@ type EvaluationReport = {
   };
   results: Array<{ id: string; name: string; passed: boolean }>;
 };
+type LiveSourceState = "idle" | "checking" | "ready" | "unavailable";
 
 const speakers: Speaker[] = [
   { id: "spk_maya", label: "Maya" },
@@ -114,6 +115,8 @@ export function ClashPointApp() {
   const [microphoneState, setMicrophoneState] = useState<MicrophoneState>("idle");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [liveSourceState, setLiveSourceState] = useState<LiveSourceState>("idle");
+  const [liveSourceMessage, setLiveSourceMessage] = useState("Optional live GitHub source not checked.");
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
@@ -180,6 +183,25 @@ export function ClashPointApp() {
     }
   };
 
+  const checkLiveSource = async () => {
+    if (liveSourceState === "checking") return;
+    setLiveSourceState("checking");
+    try {
+      const response = await fetch("/api/sources/github/health", { cache: "no-store" });
+      const result = (await response.json()) as { state?: "ready" | "unavailable"; message?: string | null };
+      if (response.ok && result.state === "ready") {
+        setLiveSourceState("ready");
+        setLiveSourceMessage("Optional live GitHub source is ready. It is not used for this fixture demo.");
+        return;
+      }
+      setLiveSourceState("unavailable");
+      setLiveSourceMessage(result.message ?? "Optional live GitHub source is unavailable. Demo fixtures remain ready.");
+    } catch {
+      setLiveSourceState("unavailable");
+      setLiveSourceMessage("Optional live GitHub source could not be checked. Demo fixtures remain ready.");
+    }
+  };
+
   const processTurn = useCallback(async (text: string, activeSpeaker: Speaker) => {
     const clean = text.trim();
     if (!clean || requestRef.current || !["active", "degraded"].includes(statusRef.current)) return false;
@@ -194,6 +216,8 @@ export function ClashPointApp() {
     setProcessing(true);
     setStage("resolve");
     setNotice(null);
+    setLiveSourceState("idle");
+    setLiveSourceMessage("Optional live GitHub source not checked.");
 
     const stageTimer = window.setTimeout(() => { if (isCurrent()) setStage("retrieve"); }, 180);
     try {
@@ -485,7 +509,16 @@ export function ClashPointApp() {
           <span className={`live-state ${status}`}><i aria-hidden="true" />{liveLabel}</span>
           {judgeMode && <span className="judge-state"><ListChecks aria-hidden="true" />GUIDED DEMO</span>}
           <button className="evaluation-trigger" onClick={() => void openEvaluation()}><BarChart3 aria-hidden="true" />EVAL 27</button>
-          <span className="source-count">SOURCES <strong>2/2</strong></span>
+          <span className="source-count">DEMO SOURCES <strong>2/2</strong></span>
+          <button
+            className={`source-health ${liveSourceState}`}
+            onClick={() => void checkLiveSource()}
+            disabled={liveSourceState === "checking"}
+            aria-label="Check optional live GitHub source"
+            title={liveSourceMessage}
+          >
+            LIVE GITHUB · {liveSourceState === "checking" ? "CHECKING" : liveSourceState === "ready" ? "READY" : liveSourceState === "unavailable" ? "OFFLINE" : "CHECK"}
+          </button>
         </div>
       </header>
 
