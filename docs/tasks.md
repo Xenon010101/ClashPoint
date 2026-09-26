@@ -54,6 +54,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **SOURCE-06** Add GitHub source health endpoint. Acceptance: disabled configuration produces an explicit 503 unavailable state without network access.
 - [x] **SOURCE-07** Add manual GitHub issue refresh endpoint. Acceptance: identifier validation happens before source access; disabled, unchanged, and refreshed outcomes remain distinguishable.
 - [x] **SOURCE-08** Expose optional live-source health in the console. Acceptance: its explicit ready, checking, and unavailable states never change the fixture-source readiness or imply that live facts participate in verification.
+- [x] **DOC-05** Document the optional live-source boundary. Acceptance: setup and troubleshooting explain that source health is separate from demo fixtures and does not alter the verification pipeline.
 - [x] **GRAPH-03** Project v2 facts into Graphify. Acceptance: authoritative v2 dependency/approval edges retain the originating Fact ID.
 - [x] **RECEIPT-02** Validate final Decision Receipts at runtime. Acceptance: receipt output is parsed through the canonical Zod contract before it can be returned.
 - [x] **DOMAIN-02** Add entity alias registry. Acceptance: aliases resolve to stable IDs and duplicate labels abstain rather than creating entities.

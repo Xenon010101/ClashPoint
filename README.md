@@ -25,6 +25,16 @@ GEMINI_MODEL=
 
 Gemini is an optional resolver for unfamiliar phrasing. When it is disabled or unavailable, deterministic checks continue and the interface reports the semantic check state honestly.
 
+Optional read-only GitHub source health:
+
+```bash
+GITHUB_ENABLED=false
+GITHUB_REPOSITORY=owner/repository
+GITHUB_TOKEN=
+```
+
+The header's **LIVE GITHUB** control only checks this optional server-side configuration. It never changes the **DEMO SOURCES 2/2** readiness indicator and refreshed live facts are not part of the fixture verification pipeline. Leave it disabled for the judged demo unless a separate, mapped read-only source exercise has been prepared.
+
 ## Demo modes
 
 - **Script:** choose **Next demo beat** to advance Context → Policy → Capacity at your own pace, or **Run demo script** to play the remaining sequence automatically. Reset enables a fresh replay. Both use the real `/api/analyze-turn` pipeline.
@@ -60,6 +70,7 @@ Deployment is intentionally deferred until the repository owner explicitly appro
 - **A demo run is out of sequence:** press Reset; this restores the exact initial fixture state.
 - **Pause or Stop:** suspends new input and discards in-flight results. Resume continues at the next unfinished script turn. Already captured transcript text remains visible; an interrupted script turn may be repeated on retry.
 - **Evaluation drawer cannot load:** close it and retry; it is a read-only local fixture run and does not affect the meeting pipeline.
+- **LIVE GITHUB reports OFFLINE:** this is expected with the default configuration. Demo fixtures and all three meeting input modes remain available.
 
 ## Commands
 

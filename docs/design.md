@@ -89,6 +89,7 @@ Evidence opens from the right and leaves the transcript visible. At widths below
 - **Presenter pacing:** Next demo beat processes the question/answer pair together, then one commitment and one assignment. Automatic playback resumes from the same cursor. Reset clears the cursor.
 - **Guided demo:** a restrained Context → Policy → Capacity rail explains the golden path and can be disabled.
 - **Evaluation:** a read-only drawer runs the 27 frozen cases and shows both aggregate measurements and per-case pass/fail state.
+- **Optional live source health:** a header control may report checking, ready, or offline for a server-only GitHub configuration. This status is distinct from the fixed **Demo sources 2/2** indicator and never implies that live facts are part of meeting verification.
 - **Microphone interim:** speech-service text is visibly provisional until the browser marks it final; unsupported, denied, and service-error states name Script and Manual as fallbacks.
 
 ## Resolution card
