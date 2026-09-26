@@ -89,6 +89,7 @@ export function ClashPointApp() {
   const statusRef = useRef<MeetingStatus>("consent");
   const sessionVersion = useRef(0);
   const requestRef = useRef<AbortController | null>(null);
+  const sourceHealthRequestRef = useRef<AbortController | null>(null);
   const scriptCursor = useRef(0);
   const [scriptPosition, setScriptPosition] = useState(0);
   const scriptRun = useRef(0);
@@ -133,6 +134,8 @@ export function ClashPointApp() {
     scriptRun.current += 1;
     requestRef.current?.abort();
     requestRef.current = null;
+    sourceHealthRequestRef.current?.abort();
+    sourceHealthRequestRef.current = null;
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
     recognition?.stop();
@@ -147,6 +150,7 @@ export function ClashPointApp() {
     sessionVersion.current += 1;
     scriptRun.current += 1;
     requestRef.current?.abort();
+    sourceHealthRequestRef.current?.abort();
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
     recognition?.stop();
@@ -186,11 +190,16 @@ export function ClashPointApp() {
   };
 
   const checkLiveSource = async () => {
-    if (liveSourceState === "checking") return;
+    if (sourceHealthRequestRef.current) return;
+    const version = sessionVersion.current;
+    const controller = new AbortController();
+    sourceHealthRequestRef.current = controller;
+    const isCurrent = () => version === sessionVersion.current && !controller.signal.aborted;
     setLiveSourceState("checking");
     try {
-      const response = await fetch("/api/sources/github/health", { cache: "no-store" });
+      const response = await fetch("/api/sources/github/health", { cache: "no-store", signal: controller.signal });
       const result = (await response.json()) as { state?: "ready" | "unavailable"; message?: string | null };
+      if (!isCurrent()) return;
       if (response.ok && result.state === "ready") {
         setLiveSourceState("ready");
         setLiveSourceMessage("Optional live GitHub source is ready. It is not used for this fixture demo.");
@@ -199,8 +208,11 @@ export function ClashPointApp() {
       setLiveSourceState("unavailable");
       setLiveSourceMessage(result.message ?? "Optional live GitHub source is unavailable. Demo fixtures remain ready.");
     } catch {
+      if (!isCurrent()) return;
       setLiveSourceState("unavailable");
       setLiveSourceMessage("Optional live GitHub source could not be checked. Demo fixtures remain ready.");
+    } finally {
+      if (isCurrent()) sourceHealthRequestRef.current = null;
     }
   };
 

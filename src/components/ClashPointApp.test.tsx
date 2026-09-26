@@ -7,6 +7,18 @@ import type { AnalyzeTurnRequest } from "@/lib/schemas";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("meeting lifecycle", () => {
+  it("discards a delayed optional-source result after Reset", async () => {
+    let deliver!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { deliver = resolve; })));
+    render(<ClashPointApp />);
+    fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Check optional live GitHub source" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    await act(async () => { deliver(new Response(JSON.stringify({ state: "unavailable", message: "GitHub source is not configured." }), { status: 503 })); });
+    fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
+    expect(screen.getByRole("button", { name: "Check optional live GitHub source" })).toHaveTextContent("CHECK");
+  });
+
   it("restores focus to the evaluation trigger after closing the drawer", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ generatedAt: "2026-09-26T00:00:00.000Z", fixtureVersion: "test", metrics: { cases: 0, passed: 0, eventAccuracyPercent: 0, collisionAccuracyPercent: 0, groundedEvidencePercent: 0, falseInterruptions: 0, medianLatencyMs: 0 }, results: [] }))));
     render(<ClashPointApp />);

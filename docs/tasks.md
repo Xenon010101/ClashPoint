@@ -64,6 +64,7 @@ The implementation order is binding. P0 is required for the hackathon demo; P1 i
 - [x] **SECURITY-01** Harden the optional GitHub error boundary. Acceptance: credentials remain server-only and provider failures cannot echo sensitive request detail into a result.
 - [x] **DEMO-05** Add a browser-ready smoke command. Acceptance: a documented command runs the non-screenshot Edge interaction checks for controls, modal focus, source boundaries, and the judge-time guard.
 - [x] **TEST-07** Verify input-mode semantics in Edge. Acceptance: Script, Manual, and Microphone controls expose the selected state with `aria-pressed` in the running interface.
+- [x] **HARDEN-04** Cancel optional source-health callbacks on lifecycle changes. Acceptance: a stale response after Reset, Pause, Stop, or mode change cannot alter a subsequent meeting state.
 - [x] **GRAPH-03** Project v2 facts into Graphify. Acceptance: authoritative v2 dependency/approval edges retain the originating Fact ID.
 - [x] **RECEIPT-02** Validate final Decision Receipts at runtime. Acceptance: receipt output is parsed through the canonical Zod contract before it can be returned.
 - [x] **DOMAIN-02** Add entity alias registry. Acceptance: aliases resolve to stable IDs and duplicate labels abstain rather than creating entities.
