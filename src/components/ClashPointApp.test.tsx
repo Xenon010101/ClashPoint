@@ -7,6 +7,20 @@ import type { AnalyzeTurnRequest } from "@/lib/schemas";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("meeting lifecycle", () => {
+  it("restores focus to the evaluation trigger after closing the drawer", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ generatedAt: "2026-09-26T00:00:00.000Z", fixtureVersion: "test", metrics: { cases: 0, passed: 0, eventAccuracyPercent: 0, collisionAccuracyPercent: 0, groundedEvidencePercent: 0, falseInterruptions: 0, medianLatencyMs: 0 }, results: [] }))));
+    render(<ClashPointApp />);
+    fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
+    const trigger = screen.getByRole("button", { name: /EVAL 27/ });
+    fireEvent.click(trigger);
+    fireEvent.click(await screen.findByRole("button", { name: "Close evaluation" }));
+    await waitFor(() => expect(trigger).toHaveFocus());
+    fireEvent.click(trigger);
+    await screen.findByRole("button", { name: "Close evaluation" });
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it("restores focus to the evidence trigger after closing the drawer", async () => {
     const result = await analyzeTurn({
       meetingId: "mtg_acme_review", principalId: "demo_product", factsVariant: "default", recentTurns: [],
@@ -32,6 +46,7 @@ describe("meeting lifecycle", () => {
     fireEvent.click(screen.getByRole("button", { name: "Check optional live GitHub source" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Check optional live GitHub source" })).toHaveTextContent("OFFLINE"));
     expect(screen.getByText("DEMO SOURCES")).toBeVisible();
+    expect(screen.getByText("GitHub source is not configured.")).toBeInTheDocument();
   });
 
   it.each(["Reset", "Pause", "Stop"])("discards an in-flight result after %s", async (action) => {

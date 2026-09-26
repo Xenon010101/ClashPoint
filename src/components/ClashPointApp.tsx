@@ -121,6 +121,7 @@ export function ClashPointApp() {
   const [now, setNow] = useState(Date.now());
   const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
   const evidenceTriggerRef = useRef<HTMLElement | null>(null);
+  const evaluationTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const transitionStatus = (next: MeetingStatus) => {
     statusRef.current = next;
@@ -160,8 +161,8 @@ export function ClashPointApp() {
     if (!selectedCard && !evaluationOpen) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelectedCard(null);
-        setEvaluationOpen(false);
+        if (selectedCard) closeEvidence();
+        if (evaluationOpen) closeEvaluation();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -287,6 +288,11 @@ export function ClashPointApp() {
   const closeEvidence = () => {
     setSelectedCard(null);
     window.requestAnimationFrame(() => evidenceTriggerRef.current?.focus());
+  };
+
+  const closeEvaluation = () => {
+    setEvaluationOpen(false);
+    window.requestAnimationFrame(() => evaluationTriggerRef.current?.focus());
   };
 
   const startMeeting = () => {
@@ -519,17 +525,19 @@ export function ClashPointApp() {
           <span className="elapsed">{elapsed(startedAt, now)}</span>
           <span className={`live-state ${status}`}><i aria-hidden="true" />{liveLabel}</span>
           {judgeMode && <span className="judge-state"><ListChecks aria-hidden="true" />GUIDED DEMO</span>}
-          <button className="evaluation-trigger" onClick={() => void openEvaluation()}><BarChart3 aria-hidden="true" />EVAL 27</button>
+          <button ref={evaluationTriggerRef} className="evaluation-trigger" onClick={() => void openEvaluation()}><BarChart3 aria-hidden="true" />EVAL 27</button>
           <span className="source-count">DEMO SOURCES <strong>2/2</strong></span>
           <button
             className={`source-health ${liveSourceState}`}
             onClick={() => void checkLiveSource()}
             disabled={liveSourceState === "checking"}
             aria-label="Check optional live GitHub source"
+            aria-describedby="live-source-status"
             title={liveSourceMessage}
           >
             LIVE GITHUB · {liveSourceState === "checking" ? "CHECKING" : liveSourceState === "ready" ? "READY" : liveSourceState === "unavailable" ? "OFFLINE" : "CHECK"}
           </button>
+          <span id="live-source-status" className="sr-only" aria-live="polite">{liveSourceMessage}</span>
         </div>
       </header>
 
@@ -648,7 +656,7 @@ export function ClashPointApp() {
           loading={evaluationLoading}
           error={evaluationError}
           onRetry={() => void openEvaluation(true)}
-          onClose={() => setEvaluationOpen(false)}
+          onClose={closeEvaluation}
         />
       )}
     </main>
