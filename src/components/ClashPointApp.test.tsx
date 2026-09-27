@@ -7,15 +7,16 @@ import type { AnalyzeTurnRequest } from "@/lib/schemas";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("meeting lifecycle", () => {
-  it("discards a delayed optional-source result after Reset", async () => {
+  it.each(["Reset", "Pause", "Stop", "manual"])("discards a delayed optional-source result after %s", async (action) => {
     let deliver!: (response: Response) => void;
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => { deliver = resolve; })));
     render(<ClashPointApp />);
     fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
     fireEvent.click(screen.getByRole("button", { name: "Check optional live GitHub source" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: action }));
     await act(async () => { deliver(new Response(JSON.stringify({ state: "unavailable", message: "GitHub source is not configured." }), { status: 503 })); });
-    fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
+    if (action === "Reset") fireEvent.click(screen.getByRole("button", { name: /Start ClashPoint/ }));
+    if (action === "Pause" || action === "Stop") fireEvent.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByRole("button", { name: "Check optional live GitHub source" })).toHaveTextContent("CHECK");
   });
 
