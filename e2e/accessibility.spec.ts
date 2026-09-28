@@ -14,13 +14,36 @@ test("evidence inspection returns focus to its trigger", async ({ page }) => {
   await expect(trigger).toBeFocused();
 });
 
+test("evidence modal keeps Tab focus within its dialog", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await page.getByRole("button", { name: /manual/i }).click();
+  await page.getByRole("button", { name: /Start ClashPoint/ }).click();
+  await page.getByLabel("Transcript turn").fill("Let’s promise Feature X to Acme by Friday.");
+  await page.getByRole("button", { name: "Submit turn" }).click();
+  await page.getByRole("button", { name: /Inspect evidence/ }).click();
+  const dialog = page.getByRole("dialog");
+  const close = dialog.getByRole("button", { name: "Close evidence" });
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("link", { name: /Open demo source/ })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+});
+
 test("evaluation inspection returns focus on close and Escape", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /Start ClashPoint/ }).click();
   const trigger = page.getByRole("button", { name: "EVAL 27" });
   await trigger.focus();
   await trigger.click();
-  await page.getByRole("button", { name: "Close evaluation" }).click();
+  const close = page.getByRole("button", { name: "Close evaluation" });
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(close).toBeFocused();
+  await close.click();
   await expect(trigger).toBeFocused();
   await trigger.click();
   await page.keyboard.press("Escape");

@@ -25,6 +25,7 @@ import { EvidenceDrawer } from "./decisions/EvidenceDrawer";
 import { JudgeGuide } from "./decisions/JudgeGuide";
 import { ResolutionCardView } from "./decisions/ResolutionCardView";
 import { ControlRail } from "./meeting/ControlRail";
+import { useModalFocus } from "./useModalFocus";
 
 type InputMode = "script" | "manual" | "microphone";
 type MeetingStatus = "consent" | "active" | "paused" | "stopped" | "degraded";
@@ -688,6 +689,8 @@ function EvaluationDrawer({
   onRetry: () => void;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  useModalFocus(dialogRef);
   const metricItems = report
     ? [
         ["Cases passed", `${report.metrics.passed}/${report.metrics.cases}`],
@@ -701,7 +704,7 @@ function EvaluationDrawer({
 
   return (
     <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
-      <aside className="evaluation-drawer" role="dialog" aria-modal="true" aria-labelledby="evaluation-title">
+      <aside ref={dialogRef} className="evaluation-drawer" role="dialog" aria-modal="true" aria-labelledby="evaluation-title">
         <header>
           <div><span>Measured locally</span><h2 id="evaluation-title">Frozen evaluation</h2></div>
           <button autoFocus onClick={onClose} aria-label="Close evaluation"><X aria-hidden="true" /></button>
